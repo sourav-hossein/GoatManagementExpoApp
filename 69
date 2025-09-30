@@ -1,0 +1,129 @@
+import React, { useMemo } from 'react';
+import { StyleSheet, View, Image } from 'react-native';
+import { Text, useTheme, Chip } from 'react-native-paper';
+import { format, isPast } from 'date-fns';
+import { Heart, ArrowRight } from 'lucide-react-native';
+
+import { BreedingRecord, Goat } from '@/models';
+import { useAppSelector } from '@/store/hooks';
+
+type BreedingRecordListItemProps = {
+  record: BreedingRecord;
+};
+
+const ParentDisplay = ({ goat }: { goat?: Goat }) => {
+    const { colors } = useTheme();
+    return (
+        <View style={styles.parentContainer}>
+            <Image source={{ uri: goat?.photoUrl || `https://i.pravatar.cc/150?u=unknown` }} style={styles.avatar} />
+            <Text style={[styles.parentName, { color: colors.text }]}>{goat?.name || 'Unknown'}</Text>
+        </View>
+    );
+};
+
+export default function BreedingRecordListItem({ record }: BreedingRecordListItemProps) {
+  const { colors } = useTheme();
+  const { goats } = useAppSelector(state => state.goats);
+
+  const { mother, father } = useMemo(() => {
+    const mother = goats.find(g => g.id === record.motherId);
+    const father = goats.find(g => g.id === record.fatherId);
+    return { mother, father };
+  }, [goats, record]);
+
+  const status = useMemo(() => {
+    if (record.actualBirthDate) {
+        return { label: 'Gave Birth', color: colors.success };
+    }
+    if (isPast(new Date(record.expectedDueDate))) {
+        return { label: 'Overdue', color: colors.error };
+    }
+    return { label: 'Pregnant', color: colors.warning };
+  }, [record, colors]);
+
+  return (
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={styles.parentsRow}>
+            <ParentDisplay goat={mother} />
+            <Heart size={24} color={colors.primary} style={styles.heartIcon} />
+            <ParentDisplay goat={father} />
+        </View>
+        <View style={styles.dateRow}>
+            <View style={styles.dateItem}>
+                <Text style={styles.dateLabel}>Mating Date</Text>
+                <Text style={[styles.dateValue, { color: colors.text }]}>{format(new Date(record.matingDate), 'MMM d, yyyy')}</Text>
+            </View>
+            <ArrowRight size={16} color={colors.textSecondary} />
+            <View style={styles.dateItem}>
+                <Text style={styles.dateLabel}>Expected Due</Text>
+                <Text style={[styles.dateValue, { color: colors.text }]}>{format(new Date(record.expectedDueDate), 'MMM d, yyyy')}</Text>
+            </View>
+        </View>
+        <Chip style={[styles.statusChip, { backgroundColor: status.color }]} textStyle={styles.statusText}>
+            {status.label}
+        </Chip>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  parentsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  parentContainer: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginBottom: 6,
+  },
+  parentName: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  heartIcon: {
+    marginHorizontal: 16,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E0E6ED',
+  },
+  dateItem: {
+    alignItems: 'center',
+  },
+  dateLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 2,
+  },
+  dateValue: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
+  statusChip: {
+    alignSelf: 'center',
+    marginTop: 12,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter_600SemiBold',
+  }
+});

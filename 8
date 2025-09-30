@@ -1,0 +1,19 @@
+export type Goat = {
+  id: string;
+  tagId: string;
+  name: string;
+  breed: string;
+  dateOfBirth: string; // Stored as ISO string
+  gender: 'Male' | 'Female';
+  status: 'Active' | 'Sold' | 'Deceased';
+  photoUrl: string;
+  weight: { date: string; value: number }[]; // Stored as JSON string
+};
+
+export type RecentActivity = {
+  id: string;
+  type: 'NEW_GOAT' | 'HEALTH_CHECK' | 'BREEDING' | 'BIRTH';
+  description: string;
+  date: string; // Stored as ISO string
+  goatId?: string;
+};

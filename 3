@@ -1,0 +1,162 @@
+import { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { Provider as PaperProvider, ActivityIndicator, useTheme } from 'react-native-paper';
+import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
+import { Provider as ReduxProvider } from 'react-redux';
+import { View, StyleSheet } from 'react-native';
+
+import { useDatabase } from '@/hooks/useDatabase';
+import { store } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { fetchGoats } from '@/store/slices/goatsSlice';
+import { fetchHealthRecords } from '@/store/slices/healthSlice';
+import { fetchBreedingRecords } from '@/store/slices/breedingSlice';
+import { fetchFeedingSchedules } from '@/store/slices/feedingSlice';
+import { fetchTransactions } from '@/store/slices/transactionsSlice';
+import { fetchTasks } from '@/store/slices/tasksSlice';
+import { LightTheme, DarkTheme } from '@/constants/Themes';
+
+SplashScreen.preventAutoHideAsync();
+
+function AppContent() {
+  const isDBLoading = useDatabase();
+  const dispatch = useAppDispatch();
+  const goatStatus = useAppSelector((state) => state.goats.status);
+  const healthStatus = useAppSelector((state) => state.health.status);
+  const breedingStatus = useAppSelector((state) => state.breeding.status);
+  const feedingStatus = useAppSelector((state) => state.feeding.status);
+  const transactionsStatus = useAppSelector((state) => state.transactions.status);
+  const tasksStatus = useAppSelector((state) => state.tasks.status);
+  const themeMode = useAppSelector((state) => state.app.theme);
+
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  useEffect(() => {
+    if (!isDBLoading) {
+      if (goatStatus === 'idle') dispatch(fetchGoats());
+      if (healthStatus === 'idle') dispatch(fetchHealthRecords());
+      if (breedingStatus === 'idle') dispatch(fetchBreedingRecords());
+      if (feedingStatus === 'idle') dispatch(fetchFeedingSchedules());
+      if (transactionsStatus === 'idle') dispatch(fetchTransactions());
+      if (tasksStatus === 'idle') dispatch(fetchTasks());
+    }
+  }, [isDBLoading, goatStatus, healthStatus, breedingStatus, feedingStatus, transactionsStatus, tasksStatus, dispatch]);
+
+  useEffect(() => {
+    const statuses = [goatStatus, healthStatus, breedingStatus, feedingStatus, transactionsStatus, tasksStatus];
+    const allLoaded = statuses.every(s => s !== 'idle' && s !== 'loading');
+    const canHideSplash = (fontsLoaded || fontError) && !isDBLoading && allLoaded;
+    if (canHideSplash) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError, isDBLoading, goatStatus, healthStatus, breedingStatus, feedingStatus, transactionsStatus, tasksStatus]);
+
+  const theme = themeMode === 'dark' ? DarkTheme : LightTheme;
+
+  const isLoading = !fontsLoaded || !!fontError || isDBLoading || [goatStatus, healthStatus, breedingStatus, feedingStatus, transactionsStatus, tasksStatus].some(s => s === 'idle' || s === 'loading');
+
+  if (isLoading) {
+    return (
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+            <ActivityIndicator animating={true} color={theme.colors.primary} size="large" />
+        </View>
+    );
+  }
+
+  return (
+    <PaperProvider theme={theme}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="add-goat"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            // Title is set dynamically in the screen
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTitleStyle: { fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
+            headerTintColor: theme.colors.primary,
+          }}
+        />
+        <Stack.Screen
+          name="add-health-record"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Add Health Record',
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTitleStyle: { fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
+            headerTintColor: theme.colors.primary,
+          }}
+        />
+        <Stack.Screen
+          name="add-breeding-record"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Log Breeding Event',
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTitleStyle: { fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
+            headerTintColor: theme.colors.primary,
+          }}
+        />
+        <Stack.Screen
+          name="add-feeding-schedule"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Add Feeding Schedule',
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTitleStyle: { fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
+            headerTintColor: theme.colors.primary,
+          }}
+        />
+        <Stack.Screen
+          name="add-transaction"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Add Transaction',
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTitleStyle: { fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
+            headerTintColor: theme.colors.primary,
+          }}
+        />
+        <Stack.Screen
+          name="add-task"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Add Task',
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTitleStyle: { fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
+            headerTintColor: theme.colors.primary,
+          }}
+        />
+        <Stack.Screen name="reports" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+    </PaperProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ReduxProvider store={store}>
+      <AppContent />
+    </ReduxProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    }
+})

@@ -1,0 +1,40 @@
+import React from 'react';
+import { StyleSheet, View, Image, Pressable } from 'react-native';
+import { Text } from 'react-native-paper';
+import { Link } from 'expo-router';
+import { Colors } from '@/constants/Colors';
+import { Goat } from '@/models';
+
+export const GoatListItem = ({ item }: { item: Goat }) => (
+  <Link href={`/goats/${item.id}`} asChild>
+    <Pressable>
+      <View style={styles.card}>
+        <View style={styles.cardContent}>
+          <Image source={{ uri: item.photoUrl }} style={styles.avatar} />
+          <View style={styles.info}>
+            <Text style={styles.name}>{item.name}</Text>
+            <Text style={styles.details}>{`Tag: ${item.tagId} | Breed: ${item.breed}`}</Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  </Link>
+);
+
+const styles = StyleSheet.create({
+  card: { 
+    marginBottom: 12, 
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cardContent: { flexDirection: 'row', alignItems: 'center', padding: 12 },
+  avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 16 },
+  info: { flex: 1 },
+  name: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.text },
+  details: { fontFamily: 'Inter_400Regular', color: Colors.textSecondary, fontSize: 12 },
+});

@@ -1,0 +1,38 @@
+import React from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text } from 'react-native-paper';
+import { Colors } from '@/constants/Colors';
+
+type QuickActionButtonProps = {
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+};
+
+export default function QuickActionButton({ icon, label, onPress }: QuickActionButtonProps) {
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.container}>
+      <View style={styles.iconContainer}>{icon}</View>
+      <Text style={styles.label}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+  },
+  label: {
+    fontSize: 12,
+    color: Colors.text,
+    fontFamily: 'Inter_600SemiBold',
+    textAlign: 'center',
+  },
+});

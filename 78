@@ -1,0 +1,25 @@
+import * as SQLite from 'expo-sqlite';
+import { Task } from '@/models';
+
+const db = SQLite.openDatabaseSync('goatly.db');
+
+export const getTasksAsync = async (): Promise<Task[]> => {
+  const allRows = await db.getAllAsync<Task>('SELECT * FROM tasks ORDER BY dueDate ASC');
+  return allRows;
+};
+
+export const addTaskAsync = async (record: Task) => {
+  await db.runAsync(
+    'INSERT INTO tasks (id, title, description, dueDate, status, relatedGoatId) VALUES (?, ?, ?, ?, ?, ?)',
+    record.id,
+    record.title,
+    record.description,
+    record.dueDate,
+    record.status,
+    record.relatedGoatId
+  );
+};
+
+export const updateTaskStatusAsync = async (id: string, status: 'Pending' | 'Completed') => {
+    await db.runAsync('UPDATE tasks SET status = ? WHERE id = ?', status, id);
+};

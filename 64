@@ -1,0 +1,82 @@
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { format } from 'date-fns';
+import { Syringe, Pill, Stethoscope, Bug } from 'lucide-react-native';
+import { Goat } from '@/models';
+import { HealthRecord } from '@/models';
+
+type HealthRecordListItemProps = {
+  record: HealthRecord;
+  goat?: Goat; // Goat is optional, may not be needed if viewing from goat's profile
+};
+
+const iconMap = {
+  Vaccination: Syringe,
+  Deworming: Bug,
+  Treatment: Pill,
+  Checkup: Stethoscope,
+};
+
+export default function HealthRecordListItem({ record, goat }: HealthRecordListItemProps) {
+  const { colors } = useTheme();
+  const Icon = iconMap[record.type];
+
+  return (
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
+      <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
+        <Icon size={20} color={colors.primary} />
+      </View>
+      <View style={styles.content}>
+        {goat && <Text style={[styles.goatName, { color: colors.primary }]}>{goat.name}</Text>}
+        <Text style={[styles.description, { color: colors.text }]}>{record.description}</Text>
+        <Text style={[styles.details, { color: colors.textSecondary }]}>
+          {record.type} on {format(new Date(record.date), 'MMM d, yyyy')}
+        </Text>
+        {record.nextDueDate && (
+          <Text style={[styles.dueDate, { color: colors.warning }]}>
+            Next due: {format(new Date(record.nextDueDate), 'MMM d, yyyy')}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+  },
+  iconContainer: {
+    padding: 10,
+    borderRadius: 25,
+    marginRight: 12,
+    alignSelf: 'flex-start',
+  },
+  content: {
+    flex: 1,
+  },
+  goatName: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  description: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 16,
+  },
+  details: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  dueDate: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    marginTop: 4,
+  },
+});

@@ -1,0 +1,71 @@
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { Goat } from '@/models';
+import { getGoatsAsync, addGoatAsync as dbAddGoat, updateGoatAsync as dbUpdateGoat, deleteGoatAsync as dbDeleteGoat } from '@/database/GoatDAO';
+
+interface GoatsState {
+  goats: Goat[];
+  status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  error: string | null;
+}
+
+const initialState: GoatsState = {
+  goats: [],
+  status: 'idle',
+  error: null,
+};
+
+export const fetchGoats = createAsyncThunk('goats/fetchGoats', async () => {
+  const goats = await getGoatsAsync();
+  return goats;
+});
+
+export const addNewGoat = createAsyncThunk('goats/addNewGoat', async (newGoat: Goat) => {
+  await dbAddGoat(newGoat);
+  return newGoat;
+});
+
+export const updateGoat = createAsyncThunk('goats/updateGoat', async (goat: Goat) => {
+  await dbUpdateGoat(goat);
+  return goat;
+});
+
+export const deleteGoat = createAsyncThunk('goats/deleteGoat', async (id: string) => {
+  await dbDeleteGoat(id);
+  return id;
+});
+
+const goatsSlice = createSlice({
+  name: 'goats',
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchGoats.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(fetchGoats.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.goats = action.payload;
+      })
+      .addCase(fetchGoats.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message || 'Failed to fetch goats';
+      })
+      .addCase(addNewGoat.fulfilled, (state, action) => {
+        state.goats.push(action.payload);
+        state.goats.sort((a, b) => a.name.localeCompare(b.name));
+      })
+      .addCase(updateGoat.fulfilled, (state, action: PayloadAction<Goat>) => {
+        const index = state.goats.findIndex((g) => g.id === action.payload.id);
+        if (index !== -1) {
+          state.goats[index] = action.payload;
+          state.goats.sort((a, b) => a.name.localeCompare(b.name));
+        }
+      })
+      .addCase(deleteGoat.fulfilled, (state, action: PayloadAction<string>) => {
+        state.goats = state.goats.filter((g) => g.id !== action.payload);
+      });
+  },
+});
+
+export default goatsSlice.reducer;

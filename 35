@@ -1,0 +1,97 @@
+import * as SQLite from 'expo-sqlite';
+import {
+  CREATE_GOATS_TABLE,
+  CREATE_HEALTH_RECORDS_TABLE,
+  CREATE_BREEDING_RECORDS_TABLE,
+  CREATE_FEEDING_SCHEDULES_TABLE,
+  CREATE_TRANSACTIONS_TABLE,
+  CREATE_TASKS_TABLE
+} from './schemas';
+import { getGoatCountAsync } from './GoatDAO';
+import { seedDatabase } from './seeder';
+
+const DB_NAME = 'goatly.db';
+const DB_VERSION = 5;
+
+const db = SQLite.openDatabaseSync(DB_NAME);
+
+const executeSqlBatch = async (sqls: string[]) => {
+    for (const sql of sqls) {
+        await db.execAsync(sql);
+    }
+};
+
+const runMigrations = async (currentVersion: number) => {
+    if (currentVersion < 1) {
+        console.log('Migrating to version 1...');
+        await executeSqlBatch([
+            CREATE_GOATS_TABLE,
+            CREATE_HEALTH_RECORDS_TABLE,
+            CREATE_BREEDING_RECORDS_TABLE,
+            CREATE_FEEDING_SCHEDULES_TABLE,
+            CREATE_TRANSACTIONS_TABLE,
+            CREATE_TASKS_TABLE,
+        ]);
+        console.log('Tables created successfully for version 1.');
+    }
+    if (currentVersion < 2) {
+        console.log('Migrating to version 2...');
+        await db.execAsync('ALTER TABLE goats ADD COLUMN color TEXT;');
+        await db.execAsync('ALTER TABLE goats ADD COLUMN notes TEXT;');
+        console.log('Goats table altered for version 2.');
+    }
+    if (currentVersion < 3) {
+        console.log('Migrating to version 3...');
+        await db.execAsync('ALTER TABLE goats ADD COLUMN acquisitionDate TEXT;');
+        await db.execAsync('ALTER TABLE goats ADD COLUMN parentIds TEXT;');
+        console.log('Goats table altered for version 3.');
+    }
+    if (currentVersion < 4) {
+        console.log('Migrating to version 4...');
+        await db.execAsync('ALTER TABLE health_records ADD COLUMN veterinarian TEXT;');
+        console.log('Health records table altered for version 4.');
+    }
+    if (currentVersion < 5) {
+        console.log('Migrating to version 5...');
+        await db.execAsync('ALTER TABLE feeding_schedules ADD COLUMN quantityUnit TEXT DEFAULT "kg" NOT NULL;');
+        console.log('Feeding schedules table altered for version 5.');
+    }
+    // Future migrations go here
+};
+
+
+export const initializeDatabase = async () => {
+  console.log('Initializing database...');
+  const currentVersion = await db.getUserVersionAsync();
+  console.log(`Current DB version: ${currentVersion}, Target DB version: ${DB_VERSION}`);
+
+  if (currentVersion < DB_VERSION) {
+      await runMigrations(currentVersion);
+      await db.setUserVersionAsync(DB_VERSION);
+      console.log(`Database migrated to version ${DB_VERSION}`);
+  } else {
+      console.log('Database is up to date.');
+  }
+
+  // Seed data if the database is empty
+  const goatCount = await getGoatCountAsync();
+  if (goatCount === 0) {
+    await seedDatabase();
+  } else {
+    console.log('Database already contains data, skipping seed.');
+  }
+};
+
+export const dropAllTables = async () => {
+    console.log('Dropping all tables...');
+    await executeSqlBatch([
+        'DROP TABLE IF EXISTS goats',
+        'DROP TABLE IF EXISTS health_records',
+        'DROP TABLE IF EXISTS breeding_records',
+        'DROP TABLE IF EXISTS feeding_schedules',
+        'DROP TABLE IF EXISTS transactions',
+        'DROP TABLE IF EXISTS tasks',
+    ]);
+    await db.setUserVersionAsync(0);
+    console.log('All tables dropped and version reset.');
+}

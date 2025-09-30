@@ -1,0 +1,198 @@
+import React, { useState, useEffect } from 'react';
+import { ScrollView, StyleSheet, View, Image, Pressable } from 'react-native';
+import { Button, SegmentedButtons, Text, ActivityIndicator, useTheme, Dialog, Portal } from 'react-native-paper';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { v4 as uuidv4 } from 'uuid';
+import { Camera } from 'lucide-react-native';
+
+import ControlledInput from '@/components/ControlledInput';
+import ControlledDatePicker from '@/components/ControlledDatePicker';
+import ControlledSelect from '@/components/ControlledSelect';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { addNewGoat, updateGoat, deleteGoat } from '@/store/slices/goatsSlice';
+import { Goat } from '@/models';
+
+const goatSchema = z.object({
+  tagId: z.string().min(1, 'Tag ID is required'),
+  name: z.string().min(1, 'Name is required'),
+  breed: z.string().min(1, 'Please select a breed'),
+  dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
+  acquisitionDate: z.date().optional(),
+  gender: z.enum(['Male', 'Female'], { required_error: 'Gender is required' }),
+  color: z.string().min(1, 'Color is required'),
+  initialWeight: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const breeds = ['Alpine', 'Nubian', 'Saanen', 'LaMancha', 'Boer', 'Other'];
+
+export default function AddGoatScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const params = useLocalSearchParams<{ id?: string }>();
+  const isEditMode = !!params.id;
+  
+  const existingGoat = useAppSelector(state => isEditMode ? state.goats.goats.find(g => g.id === params.id) : null);
+
+  const [image, setImage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+
+  const { control, handleSubmit, reset } = useForm({
+    resolver: zodResolver(goatSchema),
+    defaultValues: {
+      tagId: '', name: '', breed: '', gender: undefined, dateOfBirth: undefined, acquisitionDate: undefined, color: '', initialWeight: '', notes: ''
+    },
+  });
+  
+  useEffect(() => {
+    if (isEditMode && existingGoat) {
+      reset({
+        ...existingGoat,
+        dateOfBirth: new Date(existingGoat.dateOfBirth),
+        acquisitionDate: existingGoat.acquisitionDate ? new Date(existingGoat.acquisitionDate) : undefined,
+        initialWeight: existingGoat.weight.length > 0 ? String(existingGoat.weight[0].value) : '',
+      });
+      setImage(existingGoat.photoUrl);
+    }
+  }, [isEditMode, existingGoat, reset]);
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    if (!result.canceled) setImage(result.assets[0].uri);
+  };
+
+  const onSubmit = async (data: z.infer<typeof goatSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const weightEntry = data.initialWeight ? [{ date: new Date().toISOString(), value: parseFloat(data.initialWeight) }] : [];
+
+      if (isEditMode && existingGoat) {
+        const updatedGoat: Goat = { 
+            ...existingGoat, 
+            ...data, 
+            dateOfBirth: data.dateOfBirth.toISOString(), 
+            acquisitionDate: data.acquisitionDate?.toISOString(),
+            photoUrl: image || existingGoat.photoUrl,
+            // Keep existing weight history, don't overwrite with initial weight
+        };
+        await dispatch(updateGoat(updatedGoat)).unwrap();
+      } else {
+        const newGoat: Goat = { 
+            id: uuidv4(), 
+            ...data, 
+            dateOfBirth: data.dateOfBirth.toISOString(),
+            acquisitionDate: data.acquisitionDate?.toISOString(),
+            photoUrl: image || `https://i.pravatar.cc/150?u=${uuidv4()}`, 
+            status: 'Active', 
+            weight: weightEntry,
+            parentIds: [null, null],
+        };
+        await dispatch(addNewGoat(newGoat)).unwrap();
+      }
+      router.back();
+    } catch (error) {
+      console.error("Failed to save goat", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!params.id) return;
+    setIsSubmitting(true);
+    setDeleteDialogVisible(false);
+    try {
+        await dispatch(deleteGoat(params.id)).unwrap();
+        router.push('/(tabs)/goats');
+    } catch (error) {
+        console.error("Failed to delete goat", error);
+        setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <>
+      <Stack.Screen options={{ title: isEditMode ? 'Edit Goat' : 'Add New Goat' }} />
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+        <Pressable style={[styles.imagePicker, { backgroundColor: colors.surface }]} onPress={pickImage} disabled={isSubmitting}>
+          {image ? <Image source={{ uri: image }} style={styles.image} /> : <View style={styles.imagePlaceholder}><Camera size={48} color={colors.textSecondary} /><Text style={styles.imagePlaceholderText}>Tap to add photo</Text></View>}
+        </Pressable>
+
+        <ControlledInput control={control} name="tagId" label="Tag ID" disabled={isSubmitting} />
+        <ControlledInput control={control} name="name" label="Name" disabled={isSubmitting} />
+        <ControlledInput control={control} name="color" label="Color / Markings" disabled={isSubmitting} />
+        <ControlledSelect control={control} name="breed" label="Breed" options={breeds} disabled={isSubmitting} />
+        <ControlledDatePicker control={control} name="dateOfBirth" label="Date of Birth" disabled={isSubmitting} />
+        <ControlledDatePicker control={control} name="acquisitionDate" label="Acquisition Date" disabled={isSubmitting} />
+        <ControlledInput control={control} name="initialWeight" label="Initial Weight (kg)" keyboardType="numeric" disabled={isEditMode} />
+        
+        <Text style={[styles.label, { color: colors.textSecondary, marginTop: 12 }]}>Parents (Optional)</Text>
+        <ControlledInput control={control} name="sireId" label="Sire (Father) ID - Coming Soon" disabled={true} />
+        <ControlledInput control={control} name="damId" label="Dam (Mother) ID - Coming Soon" disabled={true} />
+
+        <ControlledInput control={control} name="notes" label="Notes" multiline numberOfLines={3} disabled={isSubmitting} />
+
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Gender</Text>
+        <Controller control={control} name="gender" render={({ field: { value, onChange }, fieldState: { error } }) => (
+            <View>
+                <SegmentedButtons value={value || ''} onValueChange={(val) => onChange(val)} buttons={[{ value: 'Male', label: 'Male', icon: 'gender-male' }, { value: 'Female', label: 'Female', icon: 'gender-female' }]} style={styles.segmentedButtons} disabled={isSubmitting} />
+                {error && <Text style={[styles.errorText, { color: colors.error }]}>{error.message}</Text>}
+            </View>
+        )} />
+
+        <Button mode="contained" onPress={handleSubmit(onSubmit)} style={styles.saveButton} labelStyle={styles.saveButtonText} disabled={isSubmitting}>
+          {isSubmitting ? <ActivityIndicator animating={true} color={colors.surface} /> : (isEditMode ? 'Save Changes' : 'Save Goat')}
+        </Button>
+
+        {isEditMode && (
+            <Button mode="text" onPress={() => setDeleteDialogVisible(true)} style={styles.deleteButton} labelStyle={{ color: colors.error }} disabled={isSubmitting}>
+                Delete Goat
+            </Button>
+        )}
+      </ScrollView>
+      <Portal>
+        <Dialog visible={deleteDialogVisible} onDismiss={() => setDeleteDialogVisible(false)}>
+            <Dialog.Title>Delete Goat</Dialog.Title>
+            <Dialog.Content>
+                <Text>Are you sure you want to delete {existingGoat?.name}? This action cannot be undone.</Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+                <Button onPress={() => setDeleteDialogVisible(false)}>Cancel</Button>
+                <Button onPress={handleDelete} textColor={colors.error}>Delete</Button>
+            </Dialog.Actions>
+        </Dialog>
+      </Portal>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  contentContainer: { padding: 20 },
+  imagePicker: { width: 150, height: 150, borderRadius: 75, alignSelf: 'center', marginBottom: 24, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  image: { width: '100%', height: '100%' },
+  imagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
+  imagePlaceholderText: { marginTop: 8, fontFamily: 'Inter_400Regular' },
+  label: { fontSize: 14, marginBottom: 8, fontFamily: 'Inter_400Regular' },
+  segmentedButtons: { marginBottom: 16 },
+  saveButton: { marginTop: 16, paddingVertical: 8 },
+  deleteButton: { marginTop: 8 },
+  saveButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+  errorText: { marginTop: -10, marginBottom: 10, marginLeft: 5, fontSize: 12 },
+});

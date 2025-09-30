@@ -1,0 +1,65 @@
+import React from 'react';
+import { StyleSheet, View, Pressable } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { formatDistanceToNow } from 'date-fns';
+import { Baby, Syringe, TestTube2 } from 'lucide-react-native';
+import { RecentActivity } from '@/models';
+
+type ActivityListItemProps = {
+  activity: RecentActivity;
+  onPress: () => void;
+};
+
+const iconMap = {
+  BIRTH: Baby,
+  HEALTH_CHECK: Syringe,
+  BREEDING: TestTube2,
+  NEW_GOAT: Baby,
+};
+
+export default function ActivityListItem({ activity, onPress }: ActivityListItemProps) {
+  const { colors } = useTheme();
+  const Icon = iconMap[activity.type];
+
+  return (
+    <Pressable onPress={onPress}>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
+          <Icon size={20} color={colors.primary} />
+        </View>
+        <View style={styles.content}>
+          <Text style={[styles.description, { color: colors.text }]}>{activity.description}</Text>
+          <Text style={[styles.date, { color: colors.textSecondary }]}>
+            {formatDistanceToNow(new Date(activity.date), { addSuffix: true })}
+          </Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 12,
+  },
+  iconContainer: {
+    padding: 10,
+    borderRadius: 25,
+    marginRight: 12,
+  },
+  content: {
+    flex: 1,
+  },
+  description: {
+    fontFamily: 'Inter_600SemiBold',
+  },
+  date: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+  },
+});

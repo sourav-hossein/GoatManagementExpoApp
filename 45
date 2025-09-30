@@ -1,0 +1,34 @@
+import React from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { Appbar, useTheme } from 'react-native-paper';
+
+export default function GoatsStackLayout() {
+  const { colors } = useTheme();
+  const router = useRouter();
+
+  return (
+    <Stack>
+      <Stack.Screen
+        name="index"
+        options={{
+          header: ({ options }) => (
+             <Appbar.Header style={{ backgroundColor: colors.background, elevation: 0 }}>
+                <Appbar.Content title="Goat Registry" titleStyle={{ fontFamily: 'Inter_700Bold', fontSize: 24, color: colors.text }} />
+                <Appbar.Action icon="filter-variant" onPress={() => (options as any).openFilterModal()} />
+            </Appbar.Header>
+          )
+        }}
+      />
+      <Stack.Screen
+        name="[id]"
+        options={{
+          headerStyle: { backgroundColor: colors.background },
+          headerTitleStyle: { fontFamily: 'Inter_600SemiBold', color: colors.text },
+          headerBackTitleVisible: false,
+          title: '',
+          headerTintColor: colors.primary,
+        }}
+      />
+    </Stack>
+  );
+}

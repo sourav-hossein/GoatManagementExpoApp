@@ -1,0 +1,118 @@
+import React, { useState, useMemo } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Button, ActivityIndicator, useTheme, SegmentedButtons, Text } from 'react-native-paper';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useRouter } from 'expo-router';
+import { v4 as uuidv4 } from 'uuid';
+
+import ControlledInput from '@/components/ControlledInput';
+import ControlledDatePicker from '@/components/ControlledDatePicker';
+import ControlledSelect from '@/components/ControlledSelect';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { addNewFeedingSchedule } from '@/store/slices/feedingSlice';
+import { FeedingSchedule } from '@/models';
+
+const scheduleSchema = z.object({
+  goatIdOrGroupId: z.string().min(1, 'Please select a goat'),
+  feedType: z.string().min(1, 'Feed type is required'),
+  quantity: z.string().min(1, 'Quantity is required'),
+  quantityUnit: z.enum(['kg', 'g', 'lbs'], { required_error: 'Unit is required' }),
+  frequency: z.enum(['Daily', 'Twice Daily', 'Weekly'], { required_error: 'Frequency is required' }),
+  startDate: z.date({ required_error: 'Start date is required' }),
+  cost: z.string().optional(),
+});
+
+const feedTypes = ['Hay', 'Grain', 'Supplement', 'Pasture', 'Silage'];
+const frequencies: ('Daily' | 'Twice Daily' | 'Weekly')[] = ['Daily', 'Twice Daily', 'Weekly'];
+
+export default function AddFeedingScheduleScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { goats } = useAppSelector(state => state.goats);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { control, handleSubmit } = useForm({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: {
+      goatIdOrGroupId: '',
+      feedType: '',
+      quantity: '',
+      quantityUnit: 'kg',
+      frequency: 'Daily',
+      startDate: new Date(),
+      cost: '',
+    },
+  });
+
+  const goatOptions = useMemo(() => goats.map(g => ({ label: `${g.name} (${g.tagId})`, value: g.id })), [goats]);
+
+  const onSubmit = async (data: z.infer<typeof scheduleSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const newSchedule: FeedingSchedule = {
+        id: uuidv4(),
+        ...data,
+        quantity: parseFloat(data.quantity),
+        startDate: data.startDate.toISOString(),
+        cost: data.cost ? parseFloat(data.cost) : undefined,
+      };
+      await dispatch(addNewFeedingSchedule(newSchedule)).unwrap();
+      router.back();
+    } catch (error) {
+      console.error("Failed to save feeding schedule", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+      <ControlledSelect control={control} name="goatIdOrGroupId" label="Select Goat" options={goatOptions} disabled={isSubmitting} />
+      <ControlledSelect control={control} name="feedType" label="Feed Type" options={feedTypes} disabled={isSubmitting} />
+      
+      <View style={styles.quantityRow}>
+        <View style={{flex: 2}}>
+            <ControlledInput control={control} name="quantity" label="Quantity" keyboardType="numeric" disabled={isSubmitting} />
+        </View>
+        <Controller control={control} name="quantityUnit" render={({ field: { value, onChange } }) => (
+            <SegmentedButtons
+                value={value}
+                onValueChange={(val) => onChange(val as 'kg' | 'g' | 'lbs')}
+                buttons={[{ value: 'kg', label: 'kg' }, { value: 'g', label: 'g' }, { value: 'lbs', label: 'lbs' }]}
+                style={styles.unitButtons}
+                density='small'
+            />
+        )} />
+      </View>
+
+      <ControlledSelect control={control} name="frequency" label="Frequency" options={frequencies} disabled={isSubmitting} />
+      <ControlledDatePicker control={control} name="startDate" label="Start Date" disabled={isSubmitting} />
+      <ControlledInput control={control} name="cost" label="Total Cost (optional)" keyboardType="numeric" disabled={isSubmitting} />
+
+      <Button mode="contained" onPress={handleSubmit(onSubmit)} style={styles.saveButton} labelStyle={styles.saveButtonText} disabled={isSubmitting}>
+        {isSubmitting ? <ActivityIndicator animating={true} color={colors.surface} /> : 'Save Schedule'}
+      </Button>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  contentContainer: { padding: 20 },
+  quantityRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  unitButtons: {
+    flex: 1,
+    marginTop: 8,
+  },
+  saveButton: { marginTop: 16, paddingVertical: 8 },
+  saveButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+});

@@ -1,0 +1,82 @@
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { format } from 'date-fns';
+import { UtensilsCrossed, Calendar, Repeat } from 'lucide-react-native';
+import { Goat, FeedingSchedule } from '@/models';
+
+type FeedingScheduleListItemProps = {
+  schedule: FeedingSchedule;
+  goat?: Goat;
+};
+
+export default function FeedingScheduleListItem({ schedule, goat }: FeedingScheduleListItemProps) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
+      <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
+        <UtensilsCrossed size={24} color={colors.primary} />
+      </View>
+      <View style={styles.content}>
+        {goat && <Text style={[styles.goatName, { color: colors.primary }]}>{goat.name}</Text>}
+        <Text style={[styles.description, { color: colors.text }]}>
+          {schedule.quantity}{schedule.quantityUnit} of {schedule.feedType}
+        </Text>
+        <View style={styles.detailsRow}>
+            <View style={styles.detailItem}>
+                <Repeat size={14} color={colors.textSecondary} />
+                <Text style={[styles.details, { color: colors.textSecondary }]}>{schedule.frequency}</Text>
+            </View>
+            <View style={styles.detailItem}>
+                <Calendar size={14} color={colors.textSecondary} />
+                <Text style={[styles.details, { color: colors.textSecondary }]}>
+                    Starts {format(new Date(schedule.startDate), 'MMM d, yyyy')}
+                </Text>
+            </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+  },
+  iconContainer: {
+    padding: 12,
+    borderRadius: 30,
+    marginRight: 16,
+    alignSelf: 'flex-start',
+  },
+  content: {
+    flex: 1,
+  },
+  goatName: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  description: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+  },
+  detailsRow: {
+    marginTop: 8,
+    gap: 6,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  details: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+  },
+});

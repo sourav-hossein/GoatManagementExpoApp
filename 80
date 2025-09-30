@@ -1,0 +1,82 @@
+import React, { useState, useMemo } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
+import { Button, ActivityIndicator, useTheme } from 'react-native-paper';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useRouter } from 'expo-router';
+import { v4 as uuidv4 } from 'uuid';
+
+import ControlledInput from '@/components/ControlledInput';
+import ControlledDatePicker from '@/components/ControlledDatePicker';
+import ControlledSelect from '@/components/ControlledSelect';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { addNewTask } from '@/store/slices/tasksSlice';
+import { Task } from '@/models';
+
+const taskSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  dueDate: z.date({ required_error: 'Due date is required' }),
+  relatedGoatId: z.string().optional(),
+});
+
+export default function AddTaskScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { goats } = useAppSelector(state => state.goats);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { control, handleSubmit } = useForm({
+    resolver: zodResolver(taskSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      dueDate: new Date(),
+      relatedGoatId: '',
+    },
+  });
+
+  const goatOptions = useMemo(() => [{ label: 'None', value: '' }, ...goats.map(g => ({ label: `${g.name} (${g.tagId})`, value: g.id }))], [goats]);
+
+  const onSubmit = async (data: z.infer<typeof taskSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const newTask: Task = {
+        id: uuidv4(),
+        ...data,
+        dueDate: data.dueDate.toISOString(),
+        status: 'Pending',
+        relatedGoatId: data.relatedGoatId || undefined,
+      };
+      await dispatch(addNewTask(newTask)).unwrap();
+      router.back();
+    } catch (error) {
+      console.error("Failed to save task", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+      <ControlledInput control={control} name="title" label="Task Title" disabled={isSubmitting} />
+      <ControlledDatePicker control={control} name="dueDate" label="Due Date" disabled={isSubmitting} />
+      <ControlledInput control={control} name="description" label="Description (Optional)" multiline numberOfLines={3} disabled={isSubmitting} />
+      <ControlledSelect control={control} name="relatedGoatId" label="Related Goat (Optional)" options={goatOptions} disabled={isSubmitting} />
+
+      <Button mode="contained" onPress={handleSubmit(onSubmit)} style={styles.saveButton} labelStyle={styles.saveButtonText} disabled={isSubmitting}>
+        {isSubmitting ? <ActivityIndicator animating={true} color={colors.surface} /> : 'Save Task'}
+      </Button>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  contentContainer: { padding: 20 },
+  saveButton: { marginTop: 16, paddingVertical: 8 },
+  saveButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+});

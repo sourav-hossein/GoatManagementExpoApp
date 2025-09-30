@@ -1,0 +1,61 @@
+import * as SQLite from 'expo-sqlite';
+import { Goat } from '@/models';
+
+const db = SQLite.openDatabaseSync('goatly.db');
+
+export const getGoatsAsync = async (): Promise<Goat[]> => {
+  const allRows = await db.getAllAsync<any>('SELECT * FROM goats ORDER BY name ASC');
+  return allRows.map(row => ({
+    ...row,
+    weight: row.weight ? JSON.parse(row.weight) : [],
+    parentIds: row.parentIds ? JSON.parse(row.parentIds) : null,
+  }));
+};
+
+export const addGoatAsync = async (goat: Goat) => {
+  await db.runAsync(
+    'INSERT INTO goats (id, tagId, name, breed, dateOfBirth, gender, status, photoUrl, weight, color, notes, acquisitionDate, parentIds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    goat.id,
+    goat.tagId,
+    goat.name,
+    goat.breed,
+    goat.dateOfBirth,
+    goat.gender,
+    goat.status,
+    goat.photoUrl,
+    JSON.stringify(goat.weight),
+    goat.color,
+    goat.notes,
+    goat.acquisitionDate,
+    goat.parentIds ? JSON.stringify(goat.parentIds) : null
+  );
+};
+
+export const updateGoatAsync = async (goat: Goat) => {
+    await db.runAsync(
+        'UPDATE goats SET tagId = ?, name = ?, breed = ?, dateOfBirth = ?, gender = ?, status = ?, photoUrl = ?, weight = ?, color = ?, notes = ?, acquisitionDate = ?, parentIds = ? WHERE id = ?',
+        goat.tagId,
+        goat.name,
+        goat.breed,
+        goat.dateOfBirth,
+        goat.gender,
+        goat.status,
+        goat.photoUrl,
+        JSON.stringify(goat.weight),
+        goat.color,
+        goat.notes,
+        goat.acquisitionDate,
+        goat.parentIds ? JSON.stringify(goat.parentIds) : null,
+        goat.id
+    );
+};
+
+export const deleteGoatAsync = async (id: string) => {
+    await db.runAsync('DELETE FROM goats WHERE id = ?', id);
+};
+
+
+export const getGoatCountAsync = async (): Promise<number> => {
+    const result = await db.getFirstAsync<{ 'COUNT(*)': number }>('SELECT COUNT(*) FROM goats');
+    return result ? result['COUNT(*)'] : 0;
+}

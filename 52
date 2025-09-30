@@ -1,0 +1,48 @@
+import React, { useState } from 'react';
+import { View, Pressable } from 'react-native';
+import { Controller, Control } from 'react-hook-form';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { format } from 'date-fns';
+import ControlledInput from './ControlledInput';
+
+type ControlledDatePickerProps = {
+  control: Control<any>;
+  name: string;
+  label: string;
+  disabled?: boolean;
+};
+
+export default function ControlledDatePicker({ control, name, label, disabled }: ControlledDatePickerProps) {
+  const [isPickerVisible, setPickerVisibility] = useState(false);
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field: { onChange, value }, fieldState: { error } }) => (
+        <View>
+          <Pressable onPress={() => !disabled && setPickerVisibility(true)}>
+            <ControlledInput
+              control={control}
+              name={name}
+              label={label}
+              value={value ? format(new Date(value), 'MMMM d, yyyy') : ''}
+              editable={false}
+              disabled={disabled}
+              error={!!error}
+            />
+          </Pressable>
+          <DateTimePickerModal
+            isVisible={isPickerVisible}
+            mode="date"
+            onConfirm={(date) => {
+              onChange(date);
+              setPickerVisibility(false);
+            }}
+            onCancel={() => setPickerVisibility(false)}
+          />
+        </View>
+      )}
+    />
+  );
+}

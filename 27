@@ -1,0 +1,33 @@
+import * as SQLite from 'expo-sqlite';
+import { Goat } from '@/types';
+import { CREATE_GOATS_TABLE } from './sql';
+
+const db = SQLite.openDatabaseSync('goatly.db');
+
+export const initDB = async () => {
+  await db.execAsync(CREATE_GOATS_TABLE);
+  console.log('Database initialized');
+};
+
+export const getGoatsAsync = async (): Promise<Goat[]> => {
+  const allRows = await db.getAllAsync<Goat>('SELECT * FROM goats ORDER BY name ASC');
+  return allRows.map(row => ({
+    ...row,
+    weight: row.weight ? JSON.parse(row.weight) : [],
+  }));
+};
+
+export const addGoatAsync = async (goat: Goat) => {
+  await db.runAsync(
+    'INSERT INTO goats (id, tagId, name, breed, dateOfBirth, gender, status, photoUrl, weight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    goat.id,
+    goat.tagId,
+    goat.name,
+    goat.breed,
+    goat.dateOfBirth,
+    goat.gender,
+    goat.status,
+    goat.photoUrl,
+    JSON.stringify(goat.weight)
+  );
+};

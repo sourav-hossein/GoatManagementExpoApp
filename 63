@@ -1,0 +1,89 @@
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Button, ActivityIndicator, useTheme } from 'react-native-paper';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useRouter } from 'expo-router';
+import { v4 as uuidv4 } from 'uuid';
+
+import ControlledInput from '@/components/ControlledInput';
+import ControlledDatePicker from '@/components/ControlledDatePicker';
+import ControlledSelect from '@/components/ControlledSelect';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { addNewHealthRecord } from '@/store/slices/healthSlice';
+import { HealthRecord } from '@/models';
+
+const healthRecordSchema = z.object({
+  goatId: z.string().min(1, 'Please select a goat'),
+  type: z.enum(['Vaccination', 'Deworming', 'Treatment', 'Checkup'], { required_error: 'Record type is required' }),
+  date: z.date({ required_error: 'Date is required' }),
+  description: z.string().min(1, 'Description is required'),
+  medication: z.string().optional(),
+  veterinarian: z.string().optional(),
+  cost: z.string().optional(),
+  nextDueDate: z.date().optional(),
+});
+
+const recordTypes = ['Vaccination', 'Deworming', 'Treatment', 'Checkup'];
+
+export default function AddHealthRecordScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { goats } = useAppSelector(state => state.goats);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { control, handleSubmit } = useForm({
+    resolver: zodResolver(healthRecordSchema),
+    defaultValues: {
+      goatId: '', type: undefined, date: new Date(), description: '', medication: '', veterinarian: '', cost: '', nextDueDate: undefined
+    },
+  });
+
+  const goatOptions = goats.map(g => ({ label: `${g.name} (${g.tagId})`, value: g.id }));
+
+  const onSubmit = async (data: z.infer<typeof healthRecordSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const newRecord: HealthRecord = {
+        id: uuidv4(),
+        ...data,
+        date: data.date.toISOString(),
+        nextDueDate: data.nextDueDate?.toISOString(),
+        cost: data.cost ? parseFloat(data.cost) : undefined,
+      };
+      await dispatch(addNewHealthRecord(newRecord)).unwrap();
+      router.back();
+    } catch (error) {
+      console.error("Failed to save health record", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+      <ControlledSelect control={control} name="goatId" label="Select Goat" options={goatOptions} disabled={isSubmitting} />
+      <ControlledSelect control={control} name="type" label="Record Type" options={recordTypes} disabled={isSubmitting} />
+      <ControlledDatePicker control={control} name="date" label="Date of Record" disabled={isSubmitting} />
+      <ControlledInput control={control} name="description" label="Description / Reason" disabled={isSubmitting} />
+      <ControlledInput control={control} name="medication" label="Medication (if any)" disabled={isSubmitting} />
+      <ControlledInput control={control} name="veterinarian" label="Veterinarian" disabled={isSubmitting} />
+      <ControlledInput control={control} name="cost" label="Cost ($)" keyboardType="numeric" disabled={isSubmitting} />
+      <ControlledDatePicker control={control} name="nextDueDate" label="Next Due Date (optional)" disabled={isSubmitting} />
+
+      <Button mode="contained" onPress={handleSubmit(onSubmit)} style={styles.saveButton} labelStyle={styles.saveButtonText} disabled={isSubmitting}>
+        {isSubmitting ? <ActivityIndicator animating={true} color={colors.surface} /> : 'Save Record'}
+      </Button>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  contentContainer: { padding: 20 },
+  saveButton: { marginTop: 16, paddingVertical: 8 },
+  saveButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+});

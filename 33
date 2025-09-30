@@ -1,0 +1,21 @@
+import * as SQLite from 'expo-sqlite';
+import { BreedingRecord } from '@/models';
+
+const db = SQLite.openDatabaseSync('goatly.db');
+
+export const getBreedingRecordsAsync = async (): Promise<BreedingRecord[]> => {
+  const allRows = await db.getAllAsync<BreedingRecord>('SELECT * FROM breeding_records ORDER BY matingDate DESC');
+  return allRows;
+};
+
+export const addBreedingRecordAsync = async (record: BreedingRecord) => {
+  await db.runAsync(
+    'INSERT INTO breeding_records (id, motherId, fatherId, matingDate, expectedDueDate, notes) VALUES (?, ?, ?, ?, ?, ?)',
+    record.id,
+    record.motherId,
+    record.fatherId,
+    record.matingDate,
+    record.expectedDueDate,
+    record.notes
+  );
+};

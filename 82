@@ -1,0 +1,85 @@
+import React from 'react';
+import { FlatList, StyleSheet } from 'react-native';
+import { Appbar, useTheme } from 'react-native-paper';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { BarChart3, Users, LineChart, TestTube2, HeartPulse, DollarSign, Utensils } from 'lucide-react-native';
+
+import ReportListItem from '@/components/ReportListItem';
+
+const reports = [
+  {
+    key: 'herd-inventory',
+    title: 'Herd Inventory',
+    description: 'A complete overview of all goats in your herd.',
+    icon: Users,
+  },
+  {
+    key: 'financial-summary',
+    title: 'Financial Summary',
+    description: 'Track income, expenses, and overall profitability.',
+    icon: DollarSign,
+  },
+  {
+    key: 'breeding-performance',
+    title: 'Breeding Performance',
+    description: 'Analyze success rates, kidding intervals, and more.',
+    icon: TestTube2,
+  },
+  {
+    key: 'health-statistics',
+    title: 'Health Statistics',
+    description: 'Monitor treatments, vaccinations, and health trends.',
+    icon: HeartPulse,
+  },
+  {
+    key: 'growth-rate',
+    title: 'Growth Rate Analysis',
+    description: 'Track weight gain and growth curves for your goats.',
+    icon: LineChart,
+  },
+  {
+    key: 'feed-consumption',
+    title: 'Feed Consumption',
+    description: 'Analyze feed usage and costs across the herd.',
+    icon: Utensils,
+  },
+];
+
+export default function ReportsScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+
+  const handleReportPress = (reportKey: string, reportTitle: string) => {
+    router.push({
+      pathname: `/reports/${reportKey}`,
+      params: { title: reportTitle },
+    });
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Appbar.Header style={{ backgroundColor: colors.background, elevation: 0 }}>
+        <Appbar.Content title="Reports & Analytics" titleStyle={{ fontFamily: 'Inter_700Bold', fontSize: 24, color: colors.text }} />
+      </Appbar.Header>
+      <FlatList
+        data={reports}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item }) => (
+          <ReportListItem
+            title={item.title}
+            description={item.description}
+            icon={<item.icon size={24} color={colors.primary} />}
+            onPress={() => handleReportPress(item.key, item.title)}
+          />
+        )}
+        contentContainerStyle={styles.list}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  list: { paddingHorizontal: 16, paddingBottom: 80 },
+});

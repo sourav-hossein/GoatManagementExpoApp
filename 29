@@ -1,0 +1,76 @@
+export type Goat = {
+  id: string;
+  tagId: string;
+  name: string;
+  breed: string;
+  dateOfBirth: string; // Stored as ISO string
+  acquisitionDate?: string; // Stored as ISO string
+  gender: 'Male' | 'Female';
+  status: 'Active' | 'Sold' | 'Deceased';
+  color: string;
+  notes?: string;
+  photoUrl: string;
+  parentIds?: [string | null, string | null]; // [sireId, damId] - Stored as JSON string
+  weight: { date: string; value: number }[]; // Stored as JSON string
+};
+
+export type HealthRecord = {
+  id: string;
+  goatId: string;
+  date: string; // ISO string
+  type: 'Vaccination' | 'Deworming' | 'Treatment' | 'Checkup';
+  description: string;
+  medication?: string;
+  veterinarian?: string;
+  cost?: number;
+  nextDueDate?: string; // ISO string
+};
+
+export type BreedingRecord = {
+  id:string;
+  motherId: string;
+  fatherId: string;
+  matingDate: string; // ISO string
+  expectedDueDate: string; // ISO string
+  actualBirthDate?: string; // ISO string
+  kidsCount?: number;
+  notes?: string;
+};
+
+export type FeedingSchedule = {
+  id: string;
+  goatIdOrGroupId: string;
+  feedType: string;
+  quantity: number;
+  quantityUnit: 'kg' | 'lbs' | 'g';
+  frequency: 'Daily' | 'Twice Daily' | 'Weekly';
+  cost?: number;
+  startDate: string; // ISO string
+};
+
+export type Transaction = {
+  id: string;
+  date: string; // ISO string
+  type: 'Income' | 'Expense';
+  category: string;
+  amount: number;
+  description: string;
+  relatedGoatId?: string;
+};
+
+export type Task = {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate: string; // ISO string
+  status: 'Pending' | 'Completed';
+  relatedGoatId?: string;
+};
+
+export type RecentActivity = {
+  id: string;
+  type: 'NEW_GOAT' | 'HEALTH_CHECK' | 'BREEDING' | 'BIRTH';
+  description: string;
+  date: string; // Stored as ISO string
+  goatId?: string;
+};

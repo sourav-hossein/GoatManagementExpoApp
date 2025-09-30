@@ -1,0 +1,51 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { Transaction } from '@/models';
+import { getTransactionsAsync, addTransactionAsync as dbAddTransaction } from '@/database/TransactionDAO';
+
+interface TransactionsState {
+  transactions: Transaction[];
+  status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  error: string | null;
+}
+
+const initialState: TransactionsState = {
+  transactions: [],
+  status: 'idle',
+  error: null,
+};
+
+export const fetchTransactions = createAsyncThunk('transactions/fetchTransactions', async () => {
+    const records = await getTransactionsAsync();
+    return records;
+});
+
+export const addNewTransaction = createAsyncThunk('transactions/addNewTransaction', async (newRecord: Transaction) => {
+    await dbAddTransaction(newRecord);
+    return newRecord;
+});
+
+const transactionsSlice = createSlice({
+  name: 'transactions',
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+        .addCase(fetchTransactions.pending, (state) => {
+            state.status = 'loading';
+        })
+        .addCase(fetchTransactions.fulfilled, (state, action) => {
+            state.status = 'succeeded';
+            state.transactions = action.payload;
+        })
+        .addCase(fetchTransactions.rejected, (state, action) => {
+            state.status = 'failed';
+            state.error = action.error.message || 'Failed to fetch transactions';
+        })
+        .addCase(addNewTransaction.fulfilled, (state, action) => {
+            state.transactions.push(action.payload);
+            state.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        });
+  },
+});
+
+export default transactionsSlice.reducer;

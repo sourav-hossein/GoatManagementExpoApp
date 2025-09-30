@@ -1,0 +1,24 @@
+import * as SQLite from 'expo-sqlite';
+import { HealthRecord } from '@/models';
+
+const db = SQLite.openDatabaseSync('goatly.db');
+
+export const getHealthRecordsAsync = async (): Promise<HealthRecord[]> => {
+  const allRows = await db.getAllAsync<HealthRecord>('SELECT * FROM health_records ORDER BY date DESC');
+  return allRows;
+};
+
+export const addHealthRecordAsync = async (record: HealthRecord) => {
+  await db.runAsync(
+    'INSERT INTO health_records (id, goatId, date, type, description, medication, cost, nextDueDate, veterinarian) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    record.id,
+    record.goatId,
+    record.date,
+    record.type,
+    record.description,
+    record.medication,
+    record.cost,
+    record.nextDueDate,
+    record.veterinarian
+  );
+};

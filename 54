@@ -1,0 +1,28 @@
+import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
+import { Colors } from './Colors';
+
+export const LightTheme = {
+  ...MD3LightTheme,
+  colors: {
+    ...MD3LightTheme.colors,
+    primary: Colors.primary,
+    accent: Colors.accent,
+    background: Colors.background,
+    surface: Colors.surface,
+    text: Colors.text,
+    // You can customize other colors here
+  },
+};
+
+export const DarkTheme = {
+  ...MD3DarkTheme,
+  colors: {
+    ...MD3DarkTheme.colors,
+    primary: Colors.primary,
+    accent: Colors.accent,
+    background: '#121212',
+    surface: '#1E1E1E',
+    text: '#FFFFFF',
+    // You can customize other colors here for dark mode
+  },
+};

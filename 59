@@ -1,0 +1,57 @@
+import React from 'react';
+import { StyleSheet, View, Dimensions, ScrollView } from 'react-native';
+import { useTheme } from 'react-native-paper';
+import { LineChart } from 'react-native-chart-kit';
+import { format } from 'date-fns';
+
+import { Goat } from '@/models';
+import SectionHeader from '@/components/SectionHeader';
+import EmptyState from '@/components/EmptyState';
+
+const screenWidth = Dimensions.get('window').width;
+
+type WeightTabProps = {
+  goat: Goat;
+};
+
+export default function WeightTab({ goat }: WeightTabProps) {
+  const { colors } = useTheme();
+
+  const weightData = {
+    labels: goat.weight.length > 1 ? goat.weight.map(w => format(new Date(w.date), 'MM/yy')) : ['Start'],
+    datasets: [{
+      data: goat.weight.length > 0 ? goat.weight.map(w => w.value) : [0],
+      color: (opacity = 1) => `rgba(74, 144, 226, ${opacity})`,
+      strokeWidth: 2,
+    }],
+  };
+  
+  const chartConfig = {
+    backgroundGradientFrom: colors.surface,
+    backgroundGradientTo: colors.surface,
+    color: (opacity = 1) => colors.text,
+    strokeWidth: 2,
+    barPercentage: 0.5,
+  };
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SectionHeader title="Weight History" />
+      <View style={[styles.chartCard, { backgroundColor: colors.surface }]}>
+        {goat.weight.length > 1 ? (
+          <LineChart data={weightData} width={screenWidth} height={250} chartConfig={chartConfig} bezier style={styles.chart} />
+        ) : (
+            <View style={{padding: 20}}>
+                <EmptyState title="No Weight Data" message="Add at least two weight entries to see a chart." />
+            </View>
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  chartCard: { borderRadius: 12, padding: 0 },
+  chart: { borderRadius: 8, paddingRight: 30 },
+});

@@ -1,0 +1,27 @@
+<dualiteAction type="file" filePath="store/farmStore.ts" action="delete"/>
+<dualiteAction type="file" filePath="services/sql.ts" action="delete"/>
+<dualiteAction type="file" filePath="services/database.ts" action="delete"/>
+<dualiteAction type="file" filePath="store/index.ts">
+import { configureStore } from '@reduxjs/toolkit';
+import goatsReducer from './slices/goatsSlice';
+import healthReducer from './slices/healthSlice';
+import breedingReducer from './slices/breedingSlice';
+import feedingReducer from './slices/feedingSlice';
+import transactionsReducer from './slices/transactionsSlice';
+import tasksReducer from './slices/tasksSlice';
+import appReducer from './slices/appSlice';
+
+export const store = configureStore({
+  reducer: {
+    app: appReducer,
+    goats: goatsReducer,
+    health: healthReducer,
+    breeding: breedingReducer,
+    feeding: feedingReducer,
+    transactions: transactionsReducer,
+    tasks: tasksReducer,
+  },
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

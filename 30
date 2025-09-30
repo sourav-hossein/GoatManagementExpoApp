@@ -1,0 +1,82 @@
+export const CREATE_GOATS_TABLE = `
+  CREATE TABLE IF NOT EXISTS goats (
+    id TEXT PRIMARY KEY NOT NULL,
+    tagId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    breed TEXT NOT NULL,
+    dateOfBirth TEXT NOT NULL,
+    gender TEXT NOT NULL,
+    status TEXT NOT NULL,
+    photoUrl TEXT,
+    weight TEXT,
+    color TEXT,
+    notes TEXT,
+    acquisitionDate TEXT,
+    parentIds TEXT
+  );
+`;
+
+export const CREATE_HEALTH_RECORDS_TABLE = `
+  CREATE TABLE IF NOT EXISTS health_records (
+    id TEXT PRIMARY KEY NOT NULL,
+    goatId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    medication TEXT,
+    cost REAL,
+    nextDueDate TEXT,
+    veterinarian TEXT,
+    FOREIGN KEY (goatId) REFERENCES goats (id) ON DELETE CASCADE
+  );
+`;
+
+export const CREATE_BREEDING_RECORDS_TABLE = `
+  CREATE TABLE IF NOT EXISTS breeding_records (
+    id TEXT PRIMARY KEY NOT NULL,
+    motherId TEXT NOT NULL,
+    fatherId TEXT NOT NULL,
+    matingDate TEXT NOT NULL,
+    expectedDueDate TEXT NOT NULL,
+    actualBirthDate TEXT,
+    kidsCount INTEGER,
+    notes TEXT,
+    FOREIGN KEY (motherId) REFERENCES goats (id) ON DELETE CASCADE,
+    FOREIGN KEY (fatherId) REFERENCES goats (id) ON DELETE CASCADE
+  );
+`;
+
+export const CREATE_FEEDING_SCHEDULES_TABLE = `
+  CREATE TABLE IF NOT EXISTS feeding_schedules (
+    id TEXT PRIMARY KEY NOT NULL,
+    goatIdOrGroupId TEXT NOT NULL,
+    feedType TEXT NOT NULL,
+    quantity REAL NOT NULL,
+    frequency TEXT NOT NULL,
+    cost REAL,
+    startDate TEXT NOT NULL
+  );
+`;
+
+export const CREATE_TRANSACTIONS_TABLE = `
+  CREATE TABLE IF NOT EXISTS transactions (
+    id TEXT PRIMARY KEY NOT NULL,
+    date TEXT NOT NULL,
+    type TEXT NOT NULL,
+    category TEXT NOT NULL,
+    amount REAL NOT NULL,
+    description TEXT NOT NULL,
+    relatedGoatId TEXT
+  );
+`;
+
+export const CREATE_TASKS_TABLE = `
+  CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    dueDate TEXT NOT NULL,
+    status TEXT NOT NULL,
+    relatedGoatId TEXT
+  );
+`;

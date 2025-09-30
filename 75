@@ -1,0 +1,96 @@
+import React, { useCallback, useMemo } from 'react';
+import { FlatList, StyleSheet, View, RefreshControl } from 'react-native';
+import { Appbar, FAB, useTheme, Text } from 'react-native-paper';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowDown, ArrowUp, DollarSign } from 'lucide-react-native';
+
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { fetchTransactions } from '@/store/slices/transactionsSlice';
+import EmptyState from '@/components/EmptyState';
+import StatCard from '@/components/StatCard';
+import TransactionListItem from '@/components/TransactionListItem';
+
+export default function FinancialScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { transactions, status } = useAppSelector((state) => state.transactions);
+  const { goats } = useAppSelector((state) => state.goats);
+  const refreshing = status === 'loading';
+
+  const onRefresh = useCallback(() => {
+    dispatch(fetchTransactions());
+  }, [dispatch]);
+
+  const goatMap = useMemo(() => new Map(goats.map(g => [g.id, g])), [goats]);
+
+  const financialSummary = useMemo(() => {
+    return transactions.reduce((acc, t) => {
+      if (t.type === 'Income') {
+        acc.income += t.amount;
+      } else {
+        acc.expense += t.amount;
+      }
+      return acc;
+    }, { income: 0, expense: 0 });
+  }, [transactions]);
+
+  const netTotal = financialSummary.income - financialSummary.expense;
+
+  const formatCurrency = (value: number) => {
+    return `$${Math.abs(value).toFixed(2)}`;
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Appbar.Header style={{ backgroundColor: colors.background, elevation: 0 }}>
+        <Appbar.Content title="Financials" titleStyle={{ fontFamily: 'Inter_700Bold', fontSize: 24, color: colors.text }} />
+      </Appbar.Header>
+      
+      <View style={styles.summaryContainer}>
+        <StatCard icon={<ArrowUp color={colors.success} size={28} />} label="Total Income" value={formatCurrency(financialSummary.income)} />
+        <StatCard icon={<ArrowDown color={colors.error} size={28} />} label="Total Expenses" value={formatCurrency(financialSummary.expense)} />
+        <StatCard icon={<DollarSign color={netTotal >= 0 ? colors.primary : colors.error} size={28} />} label="Net Profit/Loss" value={`${netTotal < 0 ? '-' : ''}${formatCurrency(netTotal)}`} />
+      </View>
+
+      <FlatList
+        data={transactions}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TransactionListItem transaction={item} goat={item.relatedGoatId ? goatMap.get(item.relatedGoatId) : undefined} />
+        )}
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        ListEmptyComponent={
+          <EmptyState
+            title="No Transactions"
+            message="Log your first income or expense using the '+' button."
+          />
+        }
+      />
+      <FAB
+        icon="plus"
+        style={[styles.fab, { backgroundColor: colors.primary }]}
+        onPress={() => router.push('/add-transaction')}
+        color="#FFFFFF"
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  summaryContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    marginBottom: 16,
+  },
+  list: { paddingHorizontal: 16, paddingBottom: 80, flexGrow: 1 },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+  },
+});

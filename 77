@@ -1,0 +1,74 @@
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { format } from 'date-fns';
+import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react-native';
+import { Goat, Transaction } from '@/models';
+
+type TransactionListItemProps = {
+  transaction: Transaction;
+  goat?: Goat;
+};
+
+export default function TransactionListItem({ transaction, goat }: TransactionListItemProps) {
+  const { colors } = useTheme();
+  const isIncome = transaction.type === 'Income';
+  const amountColor = isIncome ? colors.success : colors.error;
+
+  return (
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
+      <View style={styles.iconContainer}>
+        {isIncome ? (
+          <ArrowUpCircle size={32} color={amountColor} />
+        ) : (
+          <ArrowDownCircle size={32} color={amountColor} />
+        )}
+      </View>
+      <View style={styles.content}>
+        <Text style={[styles.description, { color: colors.text }]}>{transaction.description}</Text>
+        <Text style={[styles.category, { color: colors.textSecondary }]}>
+          {transaction.category} {goat ? `(${goat.name})` : ''}
+        </Text>
+        <Text style={[styles.date, { color: colors.textSecondary }]}>
+          {format(new Date(transaction.date), 'MMM d, yyyy')}
+        </Text>
+      </View>
+      <Text style={[styles.amount, { color: amountColor }]}>
+        {isIncome ? '+' : '-'}${transaction.amount.toFixed(2)}
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+  },
+  iconContainer: {
+    marginRight: 16,
+  },
+  content: {
+    flex: 1,
+  },
+  description: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 16,
+  },
+  category: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+  },
+  date: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  amount: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+  },
+});

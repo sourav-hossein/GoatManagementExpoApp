@@ -1,0 +1,23 @@
+import * as SQLite from 'expo-sqlite';
+import { FeedingSchedule } from '@/models';
+
+const db = SQLite.openDatabaseSync('goatly.db');
+
+export const getFeedingSchedulesAsync = async (): Promise<FeedingSchedule[]> => {
+  const allRows = await db.getAllAsync<FeedingSchedule>('SELECT * FROM feeding_schedules ORDER BY startDate DESC');
+  return allRows;
+};
+
+export const addFeedingScheduleAsync = async (record: FeedingSchedule) => {
+  await db.runAsync(
+    'INSERT INTO feeding_schedules (id, goatIdOrGroupId, feedType, quantity, quantityUnit, frequency, startDate, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    record.id,
+    record.goatIdOrGroupId,
+    record.feedType,
+    record.quantity,
+    record.quantityUnit,
+    record.frequency,
+    record.startDate,
+    record.cost
+  );
+};

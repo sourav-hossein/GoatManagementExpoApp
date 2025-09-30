@@ -1,0 +1,51 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { HealthRecord } from '@/models';
+import { getHealthRecordsAsync, addHealthRecordAsync as dbAddHealthRecord } from '@/database/HealthRecordDAO';
+
+interface HealthState {
+  records: HealthRecord[];
+  status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  error: string | null;
+}
+
+const initialState: HealthState = {
+  records: [],
+  status: 'idle',
+  error: null,
+};
+
+export const fetchHealthRecords = createAsyncThunk('health/fetchHealthRecords', async () => {
+    const records = await getHealthRecordsAsync();
+    return records;
+});
+
+export const addNewHealthRecord = createAsyncThunk('health/addNewHealthRecord', async (newRecord: HealthRecord) => {
+    await dbAddHealthRecord(newRecord);
+    return newRecord;
+});
+
+const healthSlice = createSlice({
+  name: 'health',
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+        .addCase(fetchHealthRecords.pending, (state) => {
+            state.status = 'loading';
+        })
+        .addCase(fetchHealthRecords.fulfilled, (state, action) => {
+            state.status = 'succeeded';
+            state.records = action.payload;
+        })
+        .addCase(fetchHealthRecords.rejected, (state, action) => {
+            state.status = 'failed';
+            state.error = action.error.message || 'Failed to fetch health records';
+        })
+        .addCase(addNewHealthRecord.fulfilled, (state, action) => {
+            state.records.push(action.payload);
+            state.records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        });
+  },
+});
+
+export default healthSlice.reducer;

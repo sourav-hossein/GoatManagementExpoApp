@@ -1,0 +1,153 @@
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, View, Image, Dimensions, Share } from 'react-native';
+import { Text, Appbar, useTheme } from 'react-native-paper';
+import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
+import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
+import { QrCode, Share2 } from 'lucide-react-native';
+
+import { useAppSelector } from '@/store/hooks';
+import QRCodeModal from '@/components/QRCodeModal';
+import EmptyState from '@/components/EmptyState';
+import OverviewTab from '@/components/profile/OverviewTab';
+import WeightTab from '@/components/profile/WeightTab';
+import HealthTab from '@/components/profile/HealthTab';
+import BreedingTab from '@/components/profile/BreedingTab';
+import PhotosTab from '@/components/profile/PhotosTab';
+import { Goat } from '@/models';
+
+const initialLayout = { width: Dimensions.get('window').width };
+
+export default function GoatProfileScreen() {
+  const { colors } = useTheme();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { goats } = useAppSelector((state) => state.goats);
+  const goat = goats.find((g) => g.id === id);
+
+  const [qrCodeVisible, setQrCodeVisible] = useState(false);
+  const [index, setIndex] = useState(0);
+  const [routes] = useState([
+    { key: 'overview', title: 'Overview' },
+    { key: 'weight', title: 'Weight' },
+    { key: 'health', title: 'Health' },
+    { key: 'breeding', title: 'Breeding' },
+    { key: 'photos', title: 'Photos' },
+  ]);
+
+  const offspringCount = useMemo(() => {
+    if (!goat) return 0;
+    return goats.filter(g => g.parentIds?.includes(goat.id)).length;
+  }, [goat, goats]);
+
+  const onShare = async () => {
+    if (!goat) return;
+    try {
+      const age = goat.ageString || 'N/A';
+      const message = `
+        Goat Profile: ${goat.name}
+        ---------------------------
+        Tag ID: ${goat.tagId}
+        Breed: ${goat.breed}
+        Gender: ${goat.gender}
+        Age: ${age}
+        Status: ${goat.status}
+      `.replace(/  +/g, ''); // Remove extra indentation
+
+      await Share.share({ message });
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
+  const renderScene = ({ route }: { route: { key: string }}) => {
+    if (!goat) return null;
+    switch (route.key) {
+      case 'overview':
+        return <OverviewTab goat={goat} offspringCount={offspringCount} />;
+      case 'weight':
+        return <WeightTab goat={goat} />;
+      case 'health':
+        return <HealthTab goatId={goat.id} />;
+      case 'breeding':
+        return <BreedingTab goatId={goat.id} />;
+      case 'photos':
+        return <PhotosTab goatId={goat.id} />;
+      default:
+        return null;
+    }
+  };
+
+  if (!goat) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Not Found' }} />
+        <EmptyState title="Goat Not Found" message="This goat may have been moved or deleted." />
+      </>
+    );
+  }
+
+  // Add ageString to goat object for convenience
+  const enhancedGoat = {
+    ...goat,
+    ageString: useMemo(() => {
+        const { intervalToDuration } = require('date-fns');
+        const age = intervalToDuration({ start: new Date(goat.dateOfBirth), end: new Date() });
+        return `${age.years || 0}y ${age.months || 0}m`;
+    }, [goat.dateOfBirth]),
+  };
+
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          title: goat.name,
+          headerRight: () => (
+            <View style={{ flexDirection: 'row' }}>
+              <Appbar.Action icon={() => <Share2 color={colors.primary} size={22} />} onPress={onShare} />
+              <Appbar.Action icon={() => <QrCode color={colors.primary} />} onPress={() => setQrCodeVisible(true)} />
+              <Appbar.Action icon="pencil" color={colors.primary} onPress={() => router.push({ pathname: '/add-goat', params: { id: goat.id } })} />
+            </View>
+          ),
+        }}
+      />
+      <View style={styles.container}>
+        <View style={[styles.header, { backgroundColor: colors.surface }]}>
+          <Image source={{ uri: goat.photoUrl }} style={styles.profileImage} />
+          <View style={styles.headerText}>
+            <Text style={[styles.name, { color: colors.text }]}>{goat.name}</Text>
+            <Text style={[styles.tagId, { color: colors.textSecondary }]}>Tag ID: {goat.tagId}</Text>
+          </View>
+        </View>
+
+        <TabView
+          navigationState={{ index, routes }}
+          renderScene={renderScene}
+          onIndexChange={setIndex}
+          initialLayout={initialLayout}
+          renderTabBar={props => (
+            <TabBar
+              {...props}
+              scrollEnabled
+              indicatorStyle={{ backgroundColor: colors.primary }}
+              style={{ backgroundColor: colors.surface }}
+              labelStyle={[styles.tabLabel, { color: colors.text }]}
+              tabStyle={styles.tabStyle}
+            />
+          )}
+        />
+      </View>
+      <QRCodeModal visible={qrCodeVisible} onDismiss={() => setQrCodeVisible(false)} value={goat.id} title={`${goat.name}'s ID`} />
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: { alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E0E6ED' },
+  profileImage: { width: 100, height: 100, borderRadius: 50, marginBottom: 12 },
+  headerText: { alignItems: 'center' },
+  name: { fontFamily: 'Inter_700Bold', fontSize: 24 },
+  tagId: { fontFamily: 'Inter_400Regular', fontSize: 16 },
+  tabLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, textTransform: 'capitalize' },
+  tabStyle: { width: 'auto', paddingHorizontal: 12 },
+});

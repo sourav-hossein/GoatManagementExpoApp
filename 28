@@ -1,0 +1,22 @@
+import { useEffect, useState } from 'react';
+import { initializeDatabase } from '@/database/init';
+
+export function useDatabase() {
+  const [isDBLoading, setIsDBLoading] = useState(true);
+
+  useEffect(() => {
+    const setupDatabase = async () => {
+      try {
+        await initializeDatabase();
+      } catch (error) {
+        console.error("Database initialization failed", error);
+      } finally {
+        setIsDBLoading(false);
+      }
+    };
+
+    setupDatabase();
+  }, []);
+
+  return isDBLoading;
+}

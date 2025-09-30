@@ -1,0 +1,113 @@
+import React, { useState, useMemo } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Button, ActivityIndicator, useTheme, SegmentedButtons } from 'react-native-paper';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useRouter } from 'expo-router';
+import { v4 as uuidv4 } from 'uuid';
+
+import ControlledInput from '@/components/ControlledInput';
+import ControlledDatePicker from '@/components/ControlledDatePicker';
+import ControlledSelect from '@/components/ControlledSelect';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { addNewTransaction } from '@/store/slices/transactionsSlice';
+import { Transaction } from '@/models';
+
+const transactionSchema = z.object({
+  type: z.enum(['Income', 'Expense'], { required_error: 'Type is required' }),
+  category: z.string().min(1, 'Category is required'),
+  amount: z.string().min(1, 'Amount is required').regex(/^\d+(\.\d{1,2})?$/, 'Invalid amount'),
+  date: z.date({ required_error: 'Date is required' }),
+  description: z.string().min(1, 'Description is required'),
+  relatedGoatId: z.string().optional(),
+});
+
+const incomeCategories = ['Goat Sale', 'Milk Sale', 'Breeding Fee', 'Other'];
+const expenseCategories = ['Feed', 'Medical', 'Housing', 'Equipment', 'Labor', 'Other'];
+
+export default function AddTransactionScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { goats } = useAppSelector(state => state.goats);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { control, handleSubmit, watch, setValue } = useForm({
+    resolver: zodResolver(transactionSchema),
+    defaultValues: {
+      type: 'Expense' as 'Income' | 'Expense',
+      category: '',
+      amount: '',
+      date: new Date(),
+      description: '',
+      relatedGoatId: '',
+    },
+  });
+
+  const transactionType = watch('type');
+
+  const categories = transactionType === 'Income' ? incomeCategories : expenseCategories;
+  const goatOptions = useMemo(() => [{ label: 'None', value: '' }, ...goats.map(g => ({ label: `${g.name} (${g.tagId})`, value: g.id }))], [goats]);
+
+  const onSubmit = async (data: z.infer<typeof transactionSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const newTransaction: Transaction = {
+        id: uuidv4(),
+        ...data,
+        amount: parseFloat(data.amount),
+        date: data.date.toISOString(),
+        relatedGoatId: data.relatedGoatId || undefined,
+      };
+      await dispatch(addNewTransaction(newTransaction)).unwrap();
+      router.back();
+    } catch (error) {
+      console.error("Failed to save transaction", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
+      <Controller
+        control={control}
+        name="type"
+        render={({ field: { value, onChange } }) => (
+          <SegmentedButtons
+            value={value}
+            onValueChange={(val) => {
+              onChange(val as 'Income' | 'Expense');
+              setValue('category', ''); // Reset category on type change
+            }}
+            buttons={[
+              { value: 'Income', label: 'Income', icon: 'arrow-up' },
+              { value: 'Expense', label: 'Expense', icon: 'arrow-down' },
+            ]}
+            style={styles.segmentedButtons}
+          />
+        )}
+      />
+      
+      <ControlledSelect control={control} name="category" label="Category" options={categories} disabled={isSubmitting} />
+      <ControlledInput control={control} name="amount" label="Amount ($)" keyboardType="numeric" disabled={isSubmitting} />
+      <ControlledDatePicker control={control} name="date" label="Transaction Date" disabled={isSubmitting} />
+      <ControlledInput control={control} name="description" label="Description" multiline numberOfLines={3} disabled={isSubmitting} />
+      <ControlledSelect control={control} name="relatedGoatId" label="Related Goat (Optional)" options={goatOptions} disabled={isSubmitting} />
+
+      <Button mode="contained" onPress={handleSubmit(onSubmit)} style={styles.saveButton} labelStyle={styles.saveButtonText} disabled={isSubmitting}>
+        {isSubmitting ? <ActivityIndicator animating={true} color={colors.surface} /> : 'Save Transaction'}
+      </Button>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  contentContainer: { padding: 20 },
+  segmentedButtons: { marginBottom: 20 },
+  saveButton: { marginTop: 16, paddingVertical: 8 },
+  saveButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+});

@@ -1,0 +1,51 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { FeedingSchedule } from '@/models';
+import { getFeedingSchedulesAsync, addFeedingScheduleAsync as dbAddSchedule } from '@/database/FeedingScheduleDAO';
+
+interface FeedingState {
+  schedules: FeedingSchedule[];
+  status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  error: string | null;
+}
+
+const initialState: FeedingState = {
+  schedules: [],
+  status: 'idle',
+  error: null,
+};
+
+export const fetchFeedingSchedules = createAsyncThunk('feeding/fetchSchedules', async () => {
+  const schedules = await getFeedingSchedulesAsync();
+  return schedules;
+});
+
+export const addNewFeedingSchedule = createAsyncThunk('feeding/addNewSchedule', async (newSchedule: FeedingSchedule) => {
+  await dbAddSchedule(newSchedule);
+  return newSchedule;
+});
+
+const feedingSlice = createSlice({
+  name: 'feeding',
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchFeedingSchedules.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(fetchFeedingSchedules.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.schedules = action.payload;
+      })
+      .addCase(fetchFeedingSchedules.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message || 'Failed to fetch feeding schedules';
+      })
+      .addCase(addNewFeedingSchedule.fulfilled, (state, action) => {
+        state.schedules.push(action.payload);
+        state.schedules.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+      });
+  },
+});
+
+export default feedingSlice.reducer;

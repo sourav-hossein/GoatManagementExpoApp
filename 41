@@ -1,0 +1,51 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { BreedingRecord } from '@/models';
+import { getBreedingRecordsAsync, addBreedingRecordAsync as dbAddBreedingRecord } from '@/database/BreedingRecordDAO';
+
+interface BreedingState {
+  records: BreedingRecord[];
+  status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  error: string | null;
+}
+
+const initialState: BreedingState = {
+  records: [],
+  status: 'idle',
+  error: null,
+};
+
+export const fetchBreedingRecords = createAsyncThunk('breeding/fetchBreedingRecords', async () => {
+    const records = await getBreedingRecordsAsync();
+    return records;
+});
+
+export const addNewBreedingRecord = createAsyncThunk('breeding/addNewBreedingRecord', async (newRecord: BreedingRecord) => {
+    await dbAddBreedingRecord(newRecord);
+    return newRecord;
+});
+
+const breedingSlice = createSlice({
+  name: 'breeding',
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+        .addCase(fetchBreedingRecords.pending, (state) => {
+            state.status = 'loading';
+        })
+        .addCase(fetchBreedingRecords.fulfilled, (state, action) => {
+            state.status = 'succeeded';
+            state.records = action.payload;
+        })
+        .addCase(fetchBreedingRecords.rejected, (state, action) => {
+            state.status = 'failed';
+            state.error = action.error.message || 'Failed to fetch breeding records';
+        })
+        .addCase(addNewBreedingRecord.fulfilled, (state, action) => {
+            state.records.push(action.payload);
+            state.records.sort((a, b) => new Date(b.matingDate).getTime() - new Date(a.matingDate).getTime());
+        });
+  },
+});
+
+export default breedingSlice.reducer;

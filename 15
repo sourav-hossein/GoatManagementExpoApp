@@ -1,0 +1,89 @@
+<dualiteAction type="file" filePath="app/(tabs)/settings.tsx" action="delete"/>
+<dualiteAction type="file" filePath="app/_layout.tsx">
+import { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { Provider as PaperProvider, ActivityIndicator, useTheme } from 'react-native-paper';
+import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
+import { Provider as ReduxProvider } from 'react-redux';
+import { View, StyleSheet } from 'react-native';
+
+import { useDatabase } from '@/hooks/useDatabase';
+import { store } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { fetchGoats } from '@/store/slices/goatsSlice';
+import { LightTheme, DarkTheme } from '@/constants/Themes';
+
+SplashScreen.preventAutoHideAsync();
+
+function AppContent() {
+  const isDBLoading = useDatabase();
+  const dispatch = useAppDispatch();
+  const goatStatus = useAppSelector((state) => state.goats.status);
+  const themeMode = useAppSelector((state) => state.app.theme);
+
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  useEffect(() => {
+    if (!isDBLoading && goatStatus === 'idle') {
+      dispatch(fetchGoats());
+    }
+  }, [isDBLoading, goatStatus, dispatch]);
+
+  useEffect(() => {
+    const canHideSplash = (fontsLoaded || fontError) && !isDBLoading && goatStatus !== 'idle' && goatStatus !== 'loading';
+    if (canHideSplash) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError, isDBLoading, goatStatus]);
+
+  const theme = themeMode === 'dark' ? DarkTheme : LightTheme;
+
+  if (!fontsLoaded || !fontError === null || isDBLoading || goatStatus === 'idle' || goatStatus === 'loading') {
+    return (
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+            <ActivityIndicator animating={true} color={theme.colors.primary} size="large" />
+        </View>
+    );
+  }
+
+  return (
+    <PaperProvider theme={theme}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="add-goat"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            // Title is set dynamically in the screen
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTitleStyle: { fontFamily: 'Inter_600SemiBold', color: theme.colors.text },
+            headerTintColor: theme.colors.primary,
+          }}
+        />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+    </PaperProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ReduxProvider store={store}>
+      <AppContent />
+    </ReduxProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    }
+})

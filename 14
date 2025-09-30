@@ -1,0 +1,170 @@
+import React, { useCallback, useMemo } from 'react';
+import { ScrollView, StyleSheet, View, Dimensions, RefreshControl } from 'react-native';
+import { Appbar, useTheme } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Bell, PlusCircle, Syringe, TestTubeDiagonal, Goat, CalendarClock, AlertTriangle, PieChart as PieChartIcon, ClipboardList } from 'lucide-react-native';
+import { PieChart } from 'react-native-chart-kit';
+import { useRouter } from 'expo-router';
+import { startOfMonth, isWithinInterval, isPast } from 'date-fns';
+
+import StatCard from '@/components/StatCard';
+import QuickActionButton from '@/components/QuickActionButton';
+import SectionHeader from '@/components/SectionHeader';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { fetchGoats } from '@/store/slices/goatsSlice';
+import { fetchHealthRecords } from '@/store/slices/healthSlice';
+import { fetchBreedingRecords } from '@/store/slices/breedingSlice';
+import { fetchTasks } from '@/store/slices/tasksSlice';
+import ActivityListItem from '@/components/ActivityListItem';
+import EmptyState from '@/components/EmptyState';
+
+const screenWidth = Dimensions.get('window').width;
+
+export default function DashboardScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { goats, status: goatStatus } = useAppSelector((state) => state.goats);
+  const { records: healthRecords, status: healthStatus } = useAppSelector((state) => state.health);
+  const { records: breedingRecords, status: breedingStatus } = useAppSelector((state) => state.breeding);
+  const { tasks, status: tasksStatus } = useAppSelector((state) => state.tasks);
+  
+  const refreshing = goatStatus === 'loading' || healthStatus === 'loading' || breedingStatus === 'loading' || tasksStatus === 'loading';
+
+  const onRefresh = useCallback(() => {
+    dispatch(fetchGoats());
+    dispatch(fetchHealthRecords());
+    dispatch(fetchBreedingRecords());
+    dispatch(fetchTasks());
+  }, [dispatch]);
+
+  const stats = useMemo(() => {
+    const now = new Date();
+    const start = startOfMonth(now);
+    const birthsThisMonth = goats.filter(g => isWithinInterval(new Date(g.dateOfBirth), { start, end: now })).length;
+    
+    const genderCounts = goats.reduce((acc, goat) => {
+        acc[goat.gender] = (acc[goat.gender] || 0) + 1;
+        return acc;
+    }, {} as Record<'Male' | 'Female', number>);
+
+    const healthAlerts = healthRecords.filter(r => r.nextDueDate && isPast(new Date(r.nextDueDate))).length;
+
+    const pendingTasks = tasks.filter(t => t.status === 'Pending').length;
+
+    return {
+      totalGoats: goats.length,
+      birthsThisMonth,
+      genderCounts,
+      healthAlerts,
+      pendingTasks,
+    };
+  }, [goats, healthRecords, tasks]);
+
+  const pieChartData = [
+    {
+      name: 'Males',
+      population: stats.genderCounts.Male || 0,
+      color: colors.primary,
+      legendFontColor: colors.text,
+      legendFontSize: 14,
+    },
+    {
+      name: 'Females',
+      population: stats.genderCounts.Female || 0,
+      color: colors.accent,
+      legendFontColor: colors.text,
+      legendFontSize: 14,
+    },
+  ];
+
+  const recentActivities = useMemo(() => {
+    return [...goats]
+      .sort((a, b) => new Date(b.dateOfBirth).getTime() - new Date(a.dateOfBirth).getTime())
+      .slice(0, 5)
+      .map(goat => ({
+        id: goat.id,
+        type: 'BIRTH',
+        description: `${goat.name} was born`,
+        date: goat.dateOfBirth,
+        goatId: goat.id,
+      }));
+  }, [goats]);
+
+
+  const chartConfig = {
+    backgroundGradientFrom: colors.surface,
+    backgroundGradientTo: colors.surface,
+    color: (opacity = 1) => `rgba(51, 51, 51, ${opacity})`,
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Appbar.Header style={[styles.header, { backgroundColor: colors.background }]}>
+        <Appbar.Content title="Dashboard" titleStyle={[styles.headerTitle, { color: colors.text }]} />
+        <Appbar.Action icon={() => <Bell color={colors.text} size={24} />} onPress={() => {}} />
+      </Appbar.Header>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
+        <View style={styles.statsRow}>
+          <StatCard icon={<Goat color={colors.primary} size={28} />} label="Total Goats" value={stats.totalGoats} />
+          <StatCard icon={<CalendarClock color={colors.primary} size={28} />} label="Births (Month)" value={stats.birthsThisMonth} />
+        </View>
+        <View style={styles.statsRow}>
+          <StatCard icon={<AlertTriangle color={colors.warning} size={28} />} label="Health Alerts" value={stats.healthAlerts} />
+          <StatCard icon={<ClipboardList color={colors.accent} size={28} />} label="Tasks Due" value={stats.pendingTasks} />
+        </View>
+
+        <SectionHeader title="Quick Actions" />
+        <View style={styles.actionsRow}>
+          <QuickActionButton icon={<PlusCircle color="#FFFFFF" size={24} />} label="Add Goat" onPress={() => router.push('/add-goat')} />
+          <QuickActionButton icon={<Syringe color="#FFFFFF" size={24} />} label="Record Health" onPress={() => router.push('/add-health-record')} />
+          <QuickActionButton icon={<TestTubeDiagonal color="#FFFFFF" size={24} />} label="Log Breeding" onPress={() => router.push('/add-breeding-record')} />
+        </View>
+
+        <SectionHeader title="Gender Distribution" />
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            {goats.length > 0 ? (
+                 <PieChart
+                    data={pieChartData}
+                    width={screenWidth - 32}
+                    height={220}
+                    chartConfig={chartConfig}
+                    accessor={"population"}
+                    backgroundColor={"transparent"}
+                    paddingLeft={"15"}
+                    center={[10, 0]}
+                    absolute
+                />
+            ) : (
+                <EmptyState title="No Data" message="Add a goat to see gender distribution." />
+            )}
+        </View>
+        
+        <SectionHeader title="Recent Activity" />
+        {recentActivities.length > 0 ? recentActivities.map(activity => (
+          <ActivityListItem
+            key={activity.id}
+            activity={activity}
+            onPress={() => router.push(`/goats/${activity.goatId}`)}
+          />
+        )) : (
+            <View style={[styles.card, { backgroundColor: colors.surface, padding: 20 }]}>
+                <EmptyState title="No Recent Activity" message="New births and events will appear here." />
+            </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: { elevation: 0 },
+  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 24 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 10 },
+  actionsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 20, paddingBottom: 10 },
+  card: { marginHorizontal: 16, marginBottom: 16, borderRadius: 12 },
+});

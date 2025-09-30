@@ -1,0 +1,44 @@
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Text, List, Switch, useTheme, Appbar } from 'react-native-paper';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { toggleTheme } from '@/store/slices/appSlice';
+import Screen from '@/components/Screen';
+import { Moon, Sun } from 'lucide-react-native';
+
+export default function MoreScreen() {
+  const { colors } = useTheme();
+  const dispatch = useAppDispatch();
+  const theme = useAppSelector(state => state.app.theme);
+
+  const onToggleSwitch = () => dispatch(toggleTheme());
+
+  return (
+    <Screen style={{ backgroundColor: colors.background }}>
+       <Appbar.Header style={{ backgroundColor: colors.background, elevation: 0 }}>
+          <Appbar.Content title="More" titleStyle={{ fontFamily: 'Inter_700Bold', fontSize: 24, color: colors.text }} />
+      </Appbar.Header>
+      <List.Section>
+        <List.Subheader>Appearance</List.Subheader>
+        <List.Item
+          title="Dark Mode"
+          left={() => <List.Icon icon={() => <Moon color={colors.text} />} />}
+          right={() => (
+            <Switch value={theme === 'dark'} onValueChange={onToggleSwitch} />
+          )}
+        />
+      </List.Section>
+       <List.Section>
+        <List.Subheader>Data</List.Subheader>
+        <List.Item
+          title="Export Data"
+          left={() => <List.Icon icon="download" />}
+        />
+         <List.Item
+          title="Import Data"
+          left={() => <List.Icon icon="upload" />}
+        />
+      </List.Section>
+    </Screen>
+  );
+}

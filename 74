@@ -1,0 +1,22 @@
+import * as SQLite from 'expo-sqlite';
+import { Transaction } from '@/models';
+
+const db = SQLite.openDatabaseSync('goatly.db');
+
+export const getTransactionsAsync = async (): Promise<Transaction[]> => {
+  const allRows = await db.getAllAsync<Transaction>('SELECT * FROM transactions ORDER BY date DESC');
+  return allRows;
+};
+
+export const addTransactionAsync = async (record: Transaction) => {
+  await db.runAsync(
+    'INSERT INTO transactions (id, date, type, category, amount, description, relatedGoatId) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    record.id,
+    record.date,
+    record.type,
+    record.category,
+    record.amount,
+    record.description,
+    record.relatedGoatId
+  );
+};

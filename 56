@@ -1,0 +1,129 @@
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { Modal, Portal, Text, Button, Checkbox, Divider, SegmentedButtons, useTheme } from 'react-native-paper';
+import { Goat } from '@/models';
+
+export type SortOption = 'name-asc' | 'dob-asc' | 'dob-desc';
+export type FilterOptions = {
+    breeds: string[];
+    genders: ('Male' | 'Female')[];
+};
+
+type FilterModalProps = {
+  visible: boolean;
+  onDismiss: () => void;
+  onApply: (sort: SortOption, filters: FilterOptions) => void;
+  goats: Goat[];
+  initialSort: SortOption;
+  initialFilters: FilterOptions;
+};
+
+const FilterModal = ({ visible, onDismiss, onApply, goats, initialSort, initialFilters }: FilterModalProps) => {
+  const { colors } = useTheme();
+  const [sort, setSort] = useState<SortOption>(initialSort);
+  const [selectedBreeds, setSelectedBreeds] = useState<string[]>(initialFilters.breeds);
+  const [selectedGenders, setSelectedGenders] = useState<('Male' | 'Female')[]>(initialFilters.genders);
+
+  const allBreeds = Array.from(new Set(goats.map(g => g.breed)));
+  const allGenders: ('Male' | 'Female')[] = ['Male', 'Female'];
+
+  const handleApply = () => {
+    onApply(sort, { breeds: selectedBreeds, genders: selectedGenders });
+    onDismiss();
+  };
+  
+  const handleReset = () => {
+    setSort('name-asc');
+    setSelectedBreeds([]);
+    setSelectedGenders([]);
+    onApply('name-asc', { breeds: [], genders: [] });
+    onDismiss();
+  };
+
+  const toggleBreed = (breed: string) => {
+    setSelectedBreeds(prev => prev.includes(breed) ? prev.filter(b => b !== breed) : [...prev, breed]);
+  };
+
+  const toggleGender = (gender: 'Male' | 'Female') => {
+    setSelectedGenders(prev => prev.includes(gender) ? prev.filter(g => g !== gender) : [...prev, gender]);
+  };
+
+  return (
+    <Portal>
+      <Modal visible={visible} onDismiss={onDismiss} contentContainerStyle={[styles.modal, { backgroundColor: colors.surface }]}>
+        <ScrollView>
+            <Text style={[styles.title, { color: colors.text }]}>Sort & Filter</Text>
+
+            <Text style={[styles.subtitle, { color: colors.text }]}>Sort By</Text>
+            <SegmentedButtons
+                value={sort}
+                onValueChange={(value) => setSort(value as SortOption)}
+                buttons={[
+                    { value: 'name-asc', label: 'Name' },
+                    { value: 'dob-asc', label: 'Age (Youngest)' },
+                    { value: 'dob-desc', label: 'Age (Oldest)' },
+                ]}
+            />
+            <Divider style={styles.divider} />
+
+            <Text style={[styles.subtitle, { color: colors.text }]}>Filter by Gender</Text>
+            {allGenders.map(gender => (
+                <Checkbox.Item
+                    key={gender}
+                    label={gender}
+                    status={selectedGenders.includes(gender) ? 'checked' : 'unchecked'}
+                    onPress={() => toggleGender(gender)}
+                />
+            ))}
+            <Divider style={styles.divider} />
+
+            <Text style={[styles.subtitle, { color: colors.text }]}>Filter by Breed</Text>
+            {allBreeds.map(breed => (
+                <Checkbox.Item
+                    key={breed}
+                    label={breed}
+                    status={selectedBreeds.includes(breed) ? 'checked' : 'unchecked'}
+                    onPress={() => toggleBreed(breed)}
+                />
+            ))}
+        </ScrollView>
+        <View style={styles.buttonContainer}>
+            <Button onPress={handleReset}>Reset</Button>
+            <Button mode="contained" onPress={handleApply}>Apply</Button>
+        </View>
+      </Modal>
+    </Portal>
+  );
+};
+
+const styles = StyleSheet.create({
+  modal: {
+    margin: 20,
+    padding: 20,
+    borderRadius: 12,
+    maxHeight: '80%',
+  },
+  title: {
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  divider: {
+    marginVertical: 16,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+    paddingTop: 10,
+  },
+});
+
+export default FilterModal;

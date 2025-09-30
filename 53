@@ -1,0 +1,68 @@
+import React, { useState } from 'react';
+import { View, Pressable } from 'react-native';
+import { Controller, Control } from 'react-hook-form';
+import { Menu, HelperText } from 'react-native-paper';
+import ControlledInput from './ControlledInput';
+
+type Option = string | { label: string; value: string };
+
+type ControlledSelectProps = {
+  control: Control<any>;
+  name: string;
+  label: string;
+  options: Option[];
+  disabled?: boolean;
+};
+
+export default function ControlledSelect({ control, name, label, options, disabled }: ControlledSelectProps) {
+  const [isMenuVisible, setMenuVisible] = useState(false);
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field: { onChange, value }, fieldState: { error } }) => {
+        const selectedLabel = typeof options[0] === 'string' 
+          ? value 
+          : options.find(opt => (opt as {value: string}).value === value)?.['label'] || '';
+
+        return (
+            <View>
+            <Menu
+                visible={isMenuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                anchor={
+                <Pressable onPress={() => !disabled && setMenuVisible(true)}>
+                    <ControlledInput
+                    control={control}
+                    name={name}
+                    label={label}
+                    value={selectedLabel}
+                    editable={false}
+                    disabled={disabled}
+                    error={!!error}
+                    />
+                </Pressable>
+                }>
+                {options.map((option) => {
+                    const itemValue = typeof option === 'string' ? option : option.value;
+                    const itemLabel = typeof option === 'string' ? option : option.label;
+                    return (
+                        <Menu.Item
+                            key={itemValue}
+                            onPress={() => {
+                            onChange(itemValue);
+                            setMenuVisible(false);
+                            }}
+                            title={itemLabel}
+                        />
+                    );
+                })}
+            </Menu>
+            {error && <HelperText type="error">{error.message}</HelperText>}
+            </View>
+        );
+      }}
+    />
+  );
+}

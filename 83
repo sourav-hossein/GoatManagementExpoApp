@@ -1,0 +1,58 @@
+import React from 'react';
+import { StyleSheet, View, Pressable } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { ChevronRight } from 'lucide-react-native';
+
+type ReportListItemProps = {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  onPress: () => void;
+};
+
+export default function ReportListItem({ title, description, icon, onPress }: ReportListItemProps) {
+  const { colors } = useTheme();
+
+  return (
+    <Pressable onPress={onPress}>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={[styles.iconContainer, { backgroundColor: colors.background }]}>
+          {icon}
+        </View>
+        <View style={styles.content}>
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text>
+        </View>
+        <ChevronRight size={20} color={colors.textSecondary} />
+      </View>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+  },
+  iconContainer: {
+    padding: 12,
+    borderRadius: 30,
+    marginRight: 16,
+  },
+  content: {
+    flex: 1,
+    marginRight: 12,
+  },
+  title: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 16,
+  },
+  description: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    marginTop: 2,
+  },
+});

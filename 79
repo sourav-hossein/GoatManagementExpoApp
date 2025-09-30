@@ -1,0 +1,87 @@
+import React, { useCallback, useState, useMemo } from 'react';
+import { FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { Appbar, FAB, useTheme, SegmentedButtons } from 'react-native-paper';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { fetchTasks } from '@/store/slices/tasksSlice';
+import EmptyState from '@/components/EmptyState';
+import TaskListItem from '@/components/TaskListItem';
+
+type FilterStatus = 'Pending' | 'Completed';
+
+export default function TasksScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { tasks, status } = useAppSelector((state) => state.tasks);
+  const { goats } = useAppSelector((state) => state.goats);
+  const [filter, setFilter] = useState<FilterStatus>('Pending');
+  const refreshing = status === 'loading';
+
+  const onRefresh = useCallback(() => {
+    dispatch(fetchTasks());
+  }, [dispatch]);
+
+  const goatMap = useMemo(() => new Map(goats.map(g => [g.id, g])), [goats]);
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => task.status === filter);
+  }, [tasks, filter]);
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Appbar.Header style={{ backgroundColor: colors.background, elevation: 0 }}>
+        <Appbar.Content title="Tasks" titleStyle={{ fontFamily: 'Inter_700Bold', fontSize: 24, color: colors.text }} />
+      </Appbar.Header>
+      
+      <SegmentedButtons
+        value={filter}
+        onValueChange={(value) => setFilter(value as FilterStatus)}
+        buttons={[
+          { value: 'Pending', label: 'Pending' },
+          { value: 'Completed', label: 'Completed' },
+        ]}
+        style={styles.filters}
+      />
+
+      <FlatList
+        data={filteredTasks}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TaskListItem task={item} goat={item.relatedGoatId ? goatMap.get(item.relatedGoatId) : undefined} />
+        )}
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        ListEmptyComponent={
+          <EmptyState
+            title={`No ${filter} Tasks`}
+            message={filter === 'Pending' ? "Create a new task using the '+' button." : "Completed tasks will appear here."}
+          />
+        }
+      />
+      <FAB
+        icon="plus"
+        style={[styles.fab, { backgroundColor: colors.primary }]}
+        onPress={() => router.push('/add-task')}
+        color="#FFFFFF"
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  filters: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  list: { paddingHorizontal: 16, paddingBottom: 80, flexGrow: 1 },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+  },
+});

@@ -1,0 +1,27 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+
+type Theme = 'light' | 'dark';
+
+interface AppState {
+  theme: Theme;
+}
+
+const initialState: AppState = {
+  theme: 'light',
+};
+
+const appSlice = createSlice({
+  name: 'app',
+  initialState,
+  reducers: {
+    setTheme(state, action: PayloadAction<Theme>) {
+      state.theme = action.payload;
+    },
+    toggleTheme(state) {
+      state.theme = state.theme === 'light' ? 'dark' : 'light';
+    }
+  },
+});
+
+export const { setTheme, toggleTheme } = appSlice.actions;
+export default appSlice.reducer;

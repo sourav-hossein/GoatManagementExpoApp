@@ -1,0 +1,65 @@
+import React, { useCallback } from 'react';
+import { FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { Appbar, FAB, useTheme } from 'react-native-paper';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { fetchFeedingSchedules } from '@/store/slices/feedingSlice';
+import EmptyState from '@/components/EmptyState';
+import FeedingScheduleListItem from '@/components/FeedingScheduleListItem';
+
+export default function FeedingScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { schedules, status } = useAppSelector((state) => state.feeding);
+  const { goats } = useAppSelector((state) => state.goats);
+  const refreshing = status === 'loading';
+
+  const onRefresh = useCallback(() => {
+    dispatch(fetchFeedingSchedules());
+  }, [dispatch]);
+
+  const goatMap = new Map(goats.map(g => [g.id, g]));
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Appbar.Header style={{ backgroundColor: colors.background, elevation: 0 }}>
+        <Appbar.Content title="Feeding Schedules" titleStyle={{ fontFamily: 'Inter_700Bold', fontSize: 24, color: colors.text }} />
+      </Appbar.Header>
+      <FlatList
+        data={schedules}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <FeedingScheduleListItem schedule={item} goat={goatMap.get(item.goatIdOrGroupId)} />
+        )}
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        ListEmptyComponent={
+          <EmptyState
+            title="No Feeding Schedules"
+            message="Create your first feeding schedule using the '+' button."
+          />
+        }
+      />
+      <FAB
+        icon="plus"
+        style={[styles.fab, { backgroundColor: colors.primary }]}
+        onPress={() => router.push('/add-feeding-schedule')}
+        color="#FFFFFF"
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  list: { paddingHorizontal: 16, paddingBottom: 80, flexGrow: 1 },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+  },
+});

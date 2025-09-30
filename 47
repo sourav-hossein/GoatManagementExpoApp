@@ -1,0 +1,244 @@
+import React from 'react';
+import { ScrollView, StyleSheet, View, Image, Dimensions } from 'react-native';
+import { Text, Chip, Appbar } from 'react-native-paper';
+import { useLocalSearchParams, Stack } from 'expo-router';
+import { useAppSelector } from '@/store/hooks';
+import { Colors } from '@/constants/Colors';
+import { format, intervalToDuration } from 'date-fns';
+import { LineChart } from 'react-native-chart-kit';
+import { Syringe } from 'lucide-react-native';
+import SectionHeader from '@/components/SectionHeader';
+
+const screenWidth = Dimensions.get('window').width;
+
+export default function GoatProfileScreen() {
+  const { id } = useLocalSearchParams();
+  const goat = useAppSelector((state) => state.goats.goats.find((g) => g.id === id));
+
+  if (!goat) {
+    return (
+      <View style={styles.container}>
+        <Text>Goat not found.</Text>
+      </View>
+    );
+  }
+
+  const age = intervalToDuration({ start: new Date(goat.dateOfBirth), end: new Date() });
+  const ageString = `${age.years}y ${age.months}m`;
+
+  const weightData = {
+    labels: goat.weight.length > 1 ? goat.weight.map(w => format(new Date(w.date), 'MM/yy')) : ['Start'],
+    datasets: [{
+      data: goat.weight.length > 1 ? goat.weight.map(w => w.value) : [0],
+      color: (opacity = 1) => `rgba(74, 144, 226, ${opacity})`,
+      strokeWidth: 2,
+    }],
+  };
+
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          title: goat.name,
+          headerRight: () => (
+            <Appbar.Action
+              icon="pencil"
+              color={Colors.primary}
+              onPress={() => console.log('Edit goat')}
+            />
+          ),
+        }}
+      />
+      <ScrollView style={styles.container}>
+        <Image source={{ uri: goat.photoUrl }} style={styles.profileImage} />
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.name}>{goat.name}</Text>
+            <Text style={styles.tagId}>Tag ID: {goat.tagId}</Text>
+          </View>
+          <Chip
+            style={[styles.status, { backgroundColor: goat.status === 'Active' ? Colors.success : Colors.warning }]}>
+            <Text style={styles.statusText}>{goat.status}</Text>
+          </Chip>
+        </View>
+
+        <View style={styles.infoCard}>
+          <View style={styles.infoContent}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Breed</Text>
+              <Text style={styles.infoValue}>{goat.breed}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Gender</Text>
+              <Text style={styles.infoValue}>{goat.gender}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Age</Text>
+              <Text style={styles.infoValue}>{ageString}</Text>
+            </View>
+          </View>
+        </View>
+
+        <SectionHeader title="Weight History" />
+        <View style={styles.chartCard}>
+            {goat.weight.length > 1 ? (
+              <LineChart
+                data={weightData}
+                width={screenWidth - 32}
+                height={220}
+                chartConfig={chartConfig}
+                bezier
+                style={styles.chart}
+              />
+            ) : (
+              <Text style={styles.noDataText}>Not enough weight data to display a chart. Add at least two entries.</Text>
+            )}
+        </View>
+
+        <SectionHeader title="Recent Events" />
+        <View style={styles.eventCard}>
+            <View style={styles.eventContent}>
+                <View style={styles.eventIcon}>
+                    <Syringe size={20} color={Colors.primary} />
+                </View>
+                <View>
+                    <Text style={styles.eventTitle}>Vaccination - Annual Booster</Text>
+                    <Text style={styles.eventDate}>March 15, 2025</Text>
+                </View>
+            </View>
+        </View>
+         <View style={styles.eventCard}>
+            <View style={styles.eventContent}>
+                <View style={styles.eventIcon}>
+                    <Syringe size={20} color={Colors.primary} />
+                </View>
+                <View>
+                    <Text style={styles.eventTitle}>Deworming</Text>
+                    <Text style={styles.eventDate}>March 1, 2025</Text>
+                </View>
+            </View>
+        </View>
+
+      </ScrollView>
+    </>
+  );
+}
+
+const chartConfig = {
+  backgroundGradientFrom: Colors.surface,
+  backgroundGradientTo: Colors.surface,
+  color: (opacity = 1) => `rgba(51, 51, 51, ${opacity})`,
+  strokeWidth: 2,
+  barPercentage: 0.5,
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  profileImage: {
+    width: '100%',
+    height: 250,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: Colors.surface,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginTop: -20,
+    paddingTop: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  name: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 28,
+    color: Colors.text,
+  },
+  tagId: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+  status: {
+    height: 32,
+    justifyContent: 'center',
+  },
+  statusText: {
+    color: Colors.white,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  infoCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+  },
+  infoContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 16,
+  },
+  infoItem: {
+    alignItems: 'center',
+  },
+  infoLabel: {
+    fontFamily: 'Inter_400Regular',
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.text,
+    fontSize: 16,
+  },
+  chartCard: {
+    marginHorizontal: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 0,
+  },
+  chart: {
+    borderRadius: 8,
+  },
+  noDataText: {
+      textAlign: 'center',
+      padding: 20,
+      fontFamily: 'Inter_400Regular',
+      color: Colors.textSecondary
+  },
+  eventCard: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+  },
+  eventContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  eventIcon: {
+      backgroundColor: Colors.border,
+      padding: 10,
+      borderRadius: 25,
+      marginRight: 12,
+  },
+  eventTitle: {
+      fontFamily: 'Inter_600SemiBold',
+      color: Colors.text,
+  },
+  eventDate: {
+      fontFamily: 'Inter_400Regular',
+      color: Colors.textSecondary,
+      fontSize: 12,
+  }
+});

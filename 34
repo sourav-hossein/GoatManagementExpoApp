@@ -1,0 +1,43 @@
+import { faker } from '@faker-js/faker';
+import { v4 as uuidv4 } from 'uuid';
+import { Goat } from '@/models';
+import { addGoatAsync } from './GoatDAO';
+
+const breeds = ['Alpine', 'Nubian', 'Saanen', 'LaMancha', 'Boer'];
+
+const createRandomGoat = (): Omit<Goat, 'id'> => {
+  const gender = faker.helpers.arrayElement(['Male', 'Female'] as const);
+  const name = faker.person.firstName(gender.toLowerCase() as 'male' | 'female');
+  const dob = faker.date.past({ years: 5 });
+  
+  return {
+    tagId: faker.string.alphanumeric(5).toUpperCase(),
+    name: name,
+    breed: faker.helpers.arrayElement(breeds),
+    dateOfBirth: dob.toISOString(),
+    acquisitionDate: faker.date.between({ from: dob, to: new Date() }).toISOString(),
+    gender: gender,
+    status: 'Active',
+    color: faker.color.human(),
+    notes: faker.lorem.sentence(),
+    photoUrl: `https://i.pravatar.cc/150?u=${uuidv4()}`,
+    parentIds: [null, null],
+    weight: Array.from({ length: faker.number.int({ min: 2, max: 5 }) }, (_, i) => ({
+        date: faker.date.past({ years: i, refDate: new Date() }).toISOString(),
+        value: parseFloat(faker.number.float({ min: 20, max: 80 }).toFixed(1))
+    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+  };
+};
+
+export const seedDatabase = async () => {
+    console.log('Seeding database with initial data...');
+    for (let i = 0; i < 10; i++) {
+        const goatData = createRandomGoat();
+        const newGoat: Goat = {
+            id: uuidv4(),
+            ...goatData
+        };
+        await addGoatAsync(newGoat);
+    }
+    console.log('Database seeding complete.');
+};

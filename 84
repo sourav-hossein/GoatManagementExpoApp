@@ -1,0 +1,21 @@
+import React from 'react';
+import { Stack } from 'expo-router';
+import { useTheme } from 'react-native-paper';
+
+export default function ReportsStackLayout() {
+  const { colors } = useTheme();
+
+  return (
+    <Stack>
+      <Stack.Screen
+        name="[reportType]"
+        options={{
+          headerStyle: { backgroundColor: colors.background },
+          headerTitleStyle: { fontFamily: 'Inter_600SemiBold', color: colors.text },
+          headerBackTitleVisible: false,
+          headerTintColor: colors.primary,
+        }}
+      />
+    </Stack>
+  );
+}

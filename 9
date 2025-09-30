@@ -1,0 +1,41 @@
+import { create } from 'zustand';
+import { Goat, RecentActivity } from '../models';
+import { getGoatsAsync, addGoatAsync } from '@/database/GoatDAO';
+
+interface FarmState {
+  goats: Goat[];
+  activities: RecentActivity[];
+  isDBLoading: boolean;
+  init: () => Promise<void>;
+  addGoat: (goat: Omit<Goat, 'weight' | 'status'>) => Promise<void>;
+  reloadGoats: () => Promise<void>;
+}
+
+export const useFarmStore = create<FarmState>((set, get) => ({
+  goats: [],
+  activities: [], // Placeholder for now
+  isDBLoading: true,
+  init: async () => {
+    try {
+      const goats = await getGoatsAsync();
+      set({ goats, isDBLoading: false });
+    } catch (error) {
+      console.error("Failed to load goats from database", error);
+      set({ isDBLoading: false });
+    }
+  },
+  addGoat: async (newGoatData) => {
+    const newGoat: Goat = {
+      ...newGoatData,
+      status: 'Active',
+      weight: [],
+    };
+    await addGoatAsync(newGoat);
+    // Instead of manually updating state, we re-fetch to ensure consistency
+    await get().reloadGoats();
+  },
+  reloadGoats: async () => {
+    const goats = await getGoatsAsync();
+    set({ goats });
+  }
+}));

@@ -1,0 +1,48 @@
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Card, Text } from 'react-native-paper';
+import { Colors } from '@/constants/Colors';
+
+type StatCardProps = {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+};
+
+export default function StatCard({ icon, label, value }: StatCardProps) {
+  return (
+    <Card style={styles.card}>
+      <Card.Content style={styles.content}>
+        {icon}
+        <Text style={styles.value}>{value}</Text>
+        <Text style={styles.label}>{label}</Text>
+      </Card.Content>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    flex: 1,
+    margin: 6,
+    backgroundColor: Colors.surface,
+  },
+  content: {
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 16,
+  },
+  value: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginTop: 8,
+    fontFamily: 'Inter_700Bold',
+  },
+  label: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    fontFamily: 'Inter_400Regular',
+  },
+});

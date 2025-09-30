@@ -1,0 +1,93 @@
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { format } from 'date-fns';
+import { Calendar, Users, FileText, Activity } from 'lucide-react-native';
+
+import { Goat } from '@/models';
+import SectionHeader from '@/components/SectionHeader';
+
+type OverviewTabProps = {
+  goat: Goat;
+  offspringCount: number;
+};
+
+export default function OverviewTab({ goat, offspringCount }: OverviewTabProps) {
+  const { colors } = useTheme();
+  const { goats } = useAppSelector(state => state.goats);
+
+  const parentNames = useMemo(() => {
+    if (!goat?.parentIds) return { sire: 'Unknown', dam: 'Unknown' };
+    const sire = goats.find(g => g.id === goat.parentIds?.[0]);
+    const dam = goats.find(g => g.id === goat.parentIds?.[1]);
+    return {
+        sire: sire?.name || 'Unknown',
+        dam: dam?.name || 'Unknown'
+    }
+  }, [goat, goats]);
+
+  const ageString = useMemo(() => {
+    const { intervalToDuration } = require('date-fns');
+    const age = intervalToDuration({ start: new Date(goat.dateOfBirth), end: new Date() });
+    return `${age.years || 0}y ${age.months || 0}m`;
+  }, [goat.dateOfBirth]);
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+        <View style={styles.infoContent}>
+          <View style={styles.infoItem}><Text style={styles.infoLabel}>Breed</Text><Text style={[styles.infoValue, { color: colors.text }]}>{goat.breed}</Text></View>
+          <View style={styles.infoItem}><Text style={styles.infoLabel}>Gender</Text><Text style={[styles.infoValue, { color: colors.text }]}>{goat.gender}</Text></View>
+          <View style={styles.infoItem}><Text style={styles.infoLabel}>Age</Text><Text style={[styles.infoValue, { color: colors.text }]}>{ageString}</Text></View>
+          <View style={styles.infoItem}><Text style={styles.infoLabel}>Color</Text><Text style={[styles.infoValue, { color: colors.text }]}>{goat.color}</Text></View>
+        </View>
+      </View>
+
+      <View style={[styles.detailCard, { backgroundColor: colors.surface }]}>
+        <Activity size={20} color={colors.primary} />
+        <Text style={styles.detailText}>Status: {goat.status}</Text>
+      </View>
+
+      {goat.acquisitionDate && (
+        <View style={[styles.detailCard, { backgroundColor: colors.surface }]}>
+            <Calendar size={20} color={colors.primary} />
+            <Text style={styles.detailText}>Acquired on {format(new Date(goat.acquisitionDate), 'MMMM d, yyyy')}</Text>
+        </View>
+      )}
+      
+      <View style={[styles.detailCard, { backgroundColor: colors.surface }]}>
+          <Users size={20} color={colors.primary} />
+          <Text style={styles.detailText}>Sire: {parentNames.sire} | Dam: {parentNames.dam}</Text>
+      </View>
+      
+      <View style={[styles.detailCard, { backgroundColor: colors.surface }]}>
+          <Users size={20} color={colors.primary} />
+          <Text style={styles.detailText}>Offspring: {offspringCount}</Text>
+      </View>
+
+      {goat.notes && (
+        <>
+            <SectionHeader title="Notes" />
+            <View style={[styles.notesCard, { backgroundColor: colors.surface }]}>
+                <FileText size={20} color={colors.primary} style={{marginRight: 12}}/>
+                <Text style={[styles.notesText, { color: colors.text }]}>{goat.notes}</Text>
+            </View>
+        </>
+      )}
+      <View style={{height: 40}} />
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, paddingTop: 16 },
+  infoCard: { marginHorizontal: 16, borderRadius: 12 },
+  infoContent: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 16 },
+  infoItem: { alignItems: 'center', paddingHorizontal: 4, flex: 1 },
+  infoLabel: { fontFamily: 'Inter_400Regular', color: '#888', fontSize: 12, marginBottom: 4 },
+  infoValue: { fontFamily: 'Inter_600SemiBold', fontSize: 15, textAlign: 'center' },
+  detailCard: { marginHorizontal: 16, marginTop: 8, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center' },
+  detailText: { fontFamily: 'Inter_400Regular', fontSize: 14, marginLeft: 12, flex: 1 },
+  notesCard: { marginHorizontal: 16, padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'flex-start' },
+  notesText: { fontFamily: 'Inter_400Regular', fontSize: 14, lineHeight: 20, flex: 1 },
+});
